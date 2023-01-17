@@ -239,7 +239,21 @@ impl Bitboard {
         self & clear
     }
 
-    pub fn knight_targets(&self, pos: Position) -> Self {
+    pub fn king_targets(pos: Position) -> Self {
+        let king_bb = Bitboard::with_one(pos);
+        let up = king_bb << 8_u64;
+        let up_right = (king_bb << 9_u64).clear_file(File::A);
+        let right = (king_bb << 1_u64).clear_file(File::A);
+        let down_right = (king_bb >> 7_u64).clear_file(File::A);
+        let down = king_bb >> 8_u64;
+        let down_left = (king_bb >> 9_u64).clear_file(File::H);
+        let left = king_bb >> 1_u64;
+        let up_left = (king_bb << 7_u64).clear_file(File::H);
+
+        up | up_right | right | down_right | down | down_left | left | up_left
+    }
+
+    pub fn knight_targets(pos: Position) -> Self {
         let knight_bb = Bitboard::with_one(pos);
         let up_2_right_1 = (knight_bb << 17_u64).clear_file(File::A);
         let right_2_up_1 = (knight_bb << 10_u64).clear_files(&[File::A, File::B]);
@@ -533,14 +547,29 @@ mod tests {
     }
 
     #[test]
+    fn king_targets_test() {
+        let targets_of_e2 = Bitboard::king_targets(E2);
+        assert_eq!(
+            targets_of_e2,
+            Bitboard::full().include_positions(&[E3, F3, F2, F1, E1, D1, D2, D3])
+        );
+
+        let targets_of_g8 = Bitboard::king_targets(G8);
+        assert_eq!(
+            targets_of_g8,
+            Bitboard::full().include_positions(&[H8, H7, G7, F7, F8])
+        );
+    }
+
+    #[test]
     fn knight_targets_test() {
-        let targets_of_e5 = Bitboard::empty().knight_targets(E5);
+        let targets_of_e5 = Bitboard::knight_targets(E5);
         assert_eq!(
             targets_of_e5,
             Bitboard::full().include_positions(&[F7, G6, G4, F3, D3, C4, C6, D7])
         );
 
-        let targets_of_a1 = Bitboard::empty().knight_targets(A1);
+        let targets_of_a1 = Bitboard::knight_targets(A1);
         assert_eq!(targets_of_a1, Bitboard::full().include_positions(&[B3, C2]));
     }
 }
