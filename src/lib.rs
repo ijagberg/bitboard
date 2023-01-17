@@ -81,7 +81,11 @@ impl Bitboard {
         Self(v)
     }
 
-    pub fn zero() -> Self {
+    pub fn full() -> Self {
+        Self::construct(!0)
+    }
+
+    pub fn empty() -> Self {
         Self::construct(0)
     }
 
@@ -105,56 +109,108 @@ impl Bitboard {
         b
     }
 
-    pub fn include_file(self, file: File) -> Self {
+    fn include_file_bitboard(file: File) -> Self {
         match file {
-            File::A => self & FILE_A_INCLUDE,
-            File::B => self & FILE_B_INCLUDE,
-            File::C => self & FILE_C_INCLUDE,
-            File::D => self & FILE_D_INCLUDE,
-            File::E => self & FILE_E_INCLUDE,
-            File::F => self & FILE_F_INCLUDE,
-            File::G => self & FILE_G_INCLUDE,
-            File::H => self & FILE_H_INCLUDE,
+            File::A => FILE_A_INCLUDE,
+            File::B => FILE_B_INCLUDE,
+            File::C => FILE_C_INCLUDE,
+            File::D => FILE_D_INCLUDE,
+            File::E => FILE_E_INCLUDE,
+            File::F => FILE_F_INCLUDE,
+            File::G => FILE_G_INCLUDE,
+            File::H => FILE_H_INCLUDE,
+        }
+    }
+
+    pub fn include_file(self, file: File) -> Self {
+        self & Self::include_file_bitboard(file)
+    }
+
+    pub fn include_files(self, files: &[File]) -> Self {
+        let mut include = Bitboard::empty();
+        for file in files {
+            include |= Self::include_file_bitboard(*file)
+        }
+
+        self & include
+    }
+
+    fn clear_file_bitboard(file: File) -> Self {
+        match file {
+            File::A => FILE_A_CLEAR,
+            File::B => FILE_B_CLEAR,
+            File::C => FILE_C_CLEAR,
+            File::D => FILE_D_CLEAR,
+            File::E => FILE_E_CLEAR,
+            File::F => FILE_F_CLEAR,
+            File::G => FILE_G_CLEAR,
+            File::H => FILE_H_CLEAR,
         }
     }
 
     pub fn clear_file(self, file: File) -> Self {
-        match file {
-            File::A => self & FILE_A_CLEAR,
-            File::B => self & FILE_B_CLEAR,
-            File::C => self & FILE_C_CLEAR,
-            File::D => self & FILE_D_CLEAR,
-            File::E => self & FILE_E_CLEAR,
-            File::F => self & FILE_F_CLEAR,
-            File::G => self & FILE_G_CLEAR,
-            File::H => self & FILE_H_CLEAR,
+        self & Self::clear_file_bitboard(file)
+    }
+
+    pub fn clear_files(self, files: &[File]) -> Self {
+        let mut clear = Bitboard::full();
+        for file in files {
+            clear &= Self::clear_file_bitboard(*file)
+        }
+
+        self & clear
+    }
+
+    fn include_rank_bitboard(rank: Rank) -> Self {
+        match rank {
+            Rank::One => RANK_1_INCLUDE,
+            Rank::Two => RANK_2_INCLUDE,
+            Rank::Three => RANK_3_INCLUDE,
+            Rank::Four => RANK_4_INCLUDE,
+            Rank::Five => RANK_5_INCLUDE,
+            Rank::Six => RANK_6_INCLUDE,
+            Rank::Seven => RANK_7_INCLUDE,
+            Rank::Eight => RANK_8_INCLUDE,
         }
     }
 
     pub fn include_rank(self, rank: Rank) -> Self {
+        self & Self::include_rank_bitboard(rank)
+    }
+
+    pub fn include_ranks(self, ranks: &[Rank]) -> Self {
+        let mut include = Bitboard::empty();
+        for rank in ranks {
+            include |= Self::include_rank_bitboard(*rank)
+        }
+
+        self & include
+    }
+
+    fn clear_rank_bitboard(rank: Rank) -> Self {
         match rank {
-            Rank::One => self & RANK_1_INCLUDE,
-            Rank::Two => self & RANK_2_INCLUDE,
-            Rank::Three => self & RANK_3_INCLUDE,
-            Rank::Four => self & RANK_4_INCLUDE,
-            Rank::Five => self & RANK_5_INCLUDE,
-            Rank::Six => self & RANK_6_INCLUDE,
-            Rank::Seven => self & RANK_7_INCLUDE,
-            Rank::Eight => self & RANK_8_INCLUDE,
+            Rank::One => RANK_1_CLEAR,
+            Rank::Two => RANK_2_CLEAR,
+            Rank::Three => RANK_3_CLEAR,
+            Rank::Four => RANK_4_CLEAR,
+            Rank::Five => RANK_5_CLEAR,
+            Rank::Six => RANK_6_CLEAR,
+            Rank::Seven => RANK_7_CLEAR,
+            Rank::Eight => RANK_8_CLEAR,
         }
     }
 
     pub fn clear_rank(self, rank: Rank) -> Self {
-        match rank {
-            Rank::One => self & RANK_1_CLEAR,
-            Rank::Two => self & RANK_2_CLEAR,
-            Rank::Three => self & RANK_3_CLEAR,
-            Rank::Four => self & RANK_4_CLEAR,
-            Rank::Five => self & RANK_5_CLEAR,
-            Rank::Six => self & RANK_6_CLEAR,
-            Rank::Seven => self & RANK_7_CLEAR,
-            Rank::Eight => self & RANK_8_CLEAR,
+        self & Self::clear_rank_bitboard(rank)
+    }
+
+    pub fn clear_ranks(self, ranks: &[Rank]) -> Self {
+        let mut clear = Bitboard::full();
+        for rank in ranks {
+            clear &= Self::clear_rank_bitboard(*rank);
         }
+
+        self & clear
     }
 
     fn data(&self) -> u64 {
@@ -365,11 +421,29 @@ mod tests {
     }
 
     #[test]
+    fn include_files_test() {
+        let file_b_and_e = INITIAL_STATE.include_files(&[File::B, File::E]);
+        assert_eq!(
+            file_b_and_e,
+            Bitboard::construct(0b0001001000010010000000000000000000000000000000000001001000010010)
+        )
+    }
+
+    #[test]
     fn clear_file_test() {
         let no_file_b = INITIAL_STATE.clear_file(File::B);
         assert_eq!(
             no_file_b,
             Bitboard::construct(0b1111110111111101000000000000000000000000000000001111110111111101)
+        );
+    }
+
+    #[test]
+    fn clear_files_test() {
+        let no_file_b_or_e = INITIAL_STATE.clear_files(&[File::B, File::E]);
+        assert_eq!(
+            no_file_b_or_e,
+            Bitboard::construct(0b1110110111101101000000000000000000000000000000001110110111101101)
         );
     }
 
@@ -383,11 +457,29 @@ mod tests {
     }
 
     #[test]
+    fn include_ranks_test() {
+        let rank_2_and_8 = INITIAL_STATE.include_ranks(&[Rank::Two, Rank::Eight]);
+        assert_eq!(
+            rank_2_and_8,
+            Bitboard::construct(0b1111111100000000000000000000000000000000000000001111111100000000)
+        );
+    }
+
+    #[test]
     fn clear_rank_test() {
         let no_rank_2 = INITIAL_STATE.clear_rank(Rank::Two);
         assert_eq!(
             no_rank_2,
             Bitboard::construct(0b1111111111111111000000000000000000000000000000000000000011111111)
+        );
+    }
+
+    #[test]
+    fn clear_ranks_test() {
+        let no_rank_2_or_7 = INITIAL_STATE.clear_ranks(&[Rank::Two, Rank::Seven]);
+        assert_eq!(
+            no_rank_2_or_7,
+            Bitboard::construct(0b1111111100000000000000000000000000000000000000000000000011111111)
         );
     }
 }

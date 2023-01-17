@@ -71,10 +71,14 @@ pub const INCREASING: [Position; 64] = [
     G1, G2, G3, G4, G5, G6, G7, G8, H1, H2, H3, H4, H5, H6, H7, H8,
 ];
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Position(File, Rank);
 
 impl Position {
+    fn construct(file: File, rank: Rank) -> Self {
+        Self(file, rank)
+    }
+
     pub fn file(&self) -> File {
         self.0
     }
@@ -82,9 +86,57 @@ impl Position {
     pub fn rank(&self) -> Rank {
         self.1
     }
+
+    pub fn north(&self) -> Option<Self> {
+        let file = self.file();
+        let rank = self.rank().up()?;
+        Some(Self::construct(file, rank))
+    }
+
+    pub fn north_east(&self) -> Option<Self> {
+        let file = self.file().right()?;
+        let rank = self.rank().up()?;
+        Some(Self::construct(file, rank))
+    }
+
+    pub fn east(&self) -> Option<Self> {
+        let file = self.file().right()?;
+        let rank = self.rank();
+        Some(Self::construct(file, rank))
+    }
+
+    pub fn south_east(&self) -> Option<Self> {
+        let file = self.file().right()?;
+        let rank = self.rank().down()?;
+        Some(Self::construct(file, rank))
+    }
+
+    pub fn south(&self) -> Option<Self> {
+        let file = self.file();
+        let rank = self.rank().down()?;
+        Some(Self::construct(file, rank))
+    }
+
+    pub fn south_west(&self) -> Option<Self> {
+        let file = self.file().left()?;
+        let rank = self.rank().down()?;
+        Some(Self::construct(file, rank))
+    }
+
+    pub fn west(&self) -> Option<Self> {
+        let file = self.file().left()?;
+        let rank = self.rank();
+        Some(Self::construct(file, rank))
+    }
+
+    pub fn north_west(&self) -> Option<Self> {
+        let file = self.file().left()?;
+        let rank = self.rank().up()?;
+        Some(Self::construct(file, rank))
+    }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum File {
     A,
     B,
@@ -94,6 +146,16 @@ pub enum File {
     F,
     G,
     H,
+}
+
+impl File {
+    pub fn left(&self) -> Option<Self> {
+        Self::try_from(u8::from(*self) - 1).ok()
+    }
+
+    pub fn right(&self) -> Option<Self> {
+        Self::try_from(u8::from(*self) + 1).ok()
+    }
 }
 
 impl From<File> for u8 {
@@ -111,7 +173,26 @@ impl From<File> for u8 {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+impl TryFrom<u8> for File {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        use File::*;
+        Ok(match value {
+            0 => A,
+            1 => B,
+            2 => C,
+            3 => D,
+            4 => E,
+            5 => F,
+            6 => G,
+            7 => H,
+            _ => return Err(()),
+        })
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Rank {
     One,
     Two,
@@ -121,6 +202,16 @@ pub enum Rank {
     Six,
     Seven,
     Eight,
+}
+
+impl Rank {
+    pub fn up(&self) -> Option<Self> {
+        Self::try_from(u8::from(*self) + 1).ok()
+    }
+
+    pub fn down(&self) -> Option<Self> {
+        Self::try_from(u8::from(*self) - 1).ok()
+    }
 }
 
 impl From<Rank> for u8 {
@@ -135,5 +226,41 @@ impl From<Rank> for u8 {
             Seven => 6,
             Eight => 7,
         }
+    }
+}
+
+impl TryFrom<u8> for Rank {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        use Rank::*;
+        Ok(match value {
+            0 => One,
+            1 => Two,
+            2 => Three,
+            3 => Four,
+            4 => Five,
+            5 => Six,
+            6 => Seven,
+            7 => Eight,
+            _ => return Err(()),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn directions_test() {
+        assert_eq!(E4.north(), Some(E5));
+        assert_eq!(E4.north_east(), Some(F5));
+        assert_eq!(E4.east(), Some(F4));
+        assert_eq!(E4.south_east(), Some(F3));
+        assert_eq!(E4.south(), Some(E3));
+        assert_eq!(E4.south_west(), Some(D3));
+        assert_eq!(E4.west(), Some(D4));
+        assert_eq!(E4.north_west(), Some(D5));
     }
 }
