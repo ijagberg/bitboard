@@ -109,6 +109,32 @@ impl Bitboard {
         b
     }
 
+    pub fn include_position(self, pos: Position) -> Self {
+        self & Self::with_one(pos)
+    }
+
+    pub fn include_positions(self, positions: &[Position]) -> Self {
+        let mut include = Self::empty();
+        for pos in positions {
+            include |= Self::with_one(*pos);
+        }
+
+        self & include
+    }
+
+    pub fn clear_position(self, pos: Position) -> Self {
+        self & !Self::with_one(pos)
+    }
+
+    pub fn clear_positions(self, positions: &[Position]) -> Self {
+        let mut clear = Self::full();
+        for pos in positions {
+            clear &= !Self::with_one(*pos);
+        }
+
+        self & clear
+    }
+
     fn include_file_bitboard(file: File) -> Self {
         match file {
             File::A => FILE_A_INCLUDE,
@@ -211,6 +237,27 @@ impl Bitboard {
         }
 
         self & clear
+    }
+
+    pub fn knight_targets(&self, pos: Position) -> Self {
+        let knight_bb = Bitboard::with_one(pos);
+        let up_2_right_1 = (knight_bb << 17_u64).clear_file(File::A);
+        let right_2_up_1 = (knight_bb << 10_u64).clear_files(&[File::A, File::B]);
+        let right_2_down_1 = (knight_bb >> 6_u64).clear_files(&[File::A, File::B]);
+        let down_2_right_1 = (knight_bb >> 15_u64).clear_file(File::A);
+        let down_2_left_1 = (knight_bb >> 17_u64).clear_file(File::H);
+        let left_2_down_1 = (knight_bb >> 10_u64).clear_files(&[File::G, File::H]);
+        let left_2_up_1 = (knight_bb << 6_u64).clear_files(&[File::G, File::H]);
+        let up_2_left_1 = (knight_bb << 15_u64).clear_file(File::H);
+
+        up_2_right_1
+            | right_2_up_1
+            | right_2_down_1
+            | down_2_right_1
+            | down_2_left_1
+            | left_2_down_1
+            | left_2_up_1
+            | up_2_left_1
     }
 
     fn data(&self) -> u64 {
@@ -320,9 +367,11 @@ impl Display for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let chars: Vec<char> = format!("{:064b}", self.data()).chars().collect();
 
-        let mut output = Vec::new();
-        for chunk in chars.chunks(8) {
-            let line = chunk.iter().rev().collect::<String>();
+        let mut output = vec![String::from("  abcdefgh")];
+        for (idx, chunk) in chars.chunks(8).enumerate() {
+            let mut line = String::with_capacity(10);
+            line.push_str(&format!("{} ", 8 - idx));
+            line.push_str(&chunk.iter().rev().collect::<String>());
             output.push(line);
         }
 
@@ -481,5 +530,17 @@ mod tests {
             no_rank_2_or_7,
             Bitboard::construct(0b1111111100000000000000000000000000000000000000000000000011111111)
         );
+    }
+
+    #[test]
+    fn knight_targets_test() {
+        let targets_of_e5 = Bitboard::empty().knight_targets(E5);
+        assert_eq!(
+            targets_of_e5,
+            Bitboard::full().include_positions(&[F7, G6, G4, F3, D3, C4, C6, D7])
+        );
+
+        let targets_of_a1 = Bitboard::empty().knight_targets(A1);
+        assert_eq!(targets_of_a1, Bitboard::full().include_positions(&[B3, C2]));
     }
 }
