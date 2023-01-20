@@ -1,7 +1,9 @@
 use position::*;
 use std::{
     fmt::{Debug, Display},
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr},
+    ops::{
+        Add, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr, Sub,
+    },
 };
 
 pub mod position;
@@ -278,10 +280,6 @@ impl Bitboard {
             .mask_file(from.file())
     }
 
-    pub fn up_occupancy_ray(from: Position) -> Self {
-        Self::up_ray(from).clear_rank(Rank::Eight)
-    }
-
     pub fn up_right_ray(from: Position) -> Self {
         Self::full().mask_positions(
             from.file()
@@ -291,20 +289,10 @@ impl Bitboard {
         )
     }
 
-    pub fn up_right_occupancy_ray(from: Position) -> Self {
-        Self::up_right_ray(from)
-            .clear_file(File::H)
-            .clear_rank(Rank::Eight)
-    }
-
     pub fn right_ray(from: Position) -> Self {
         Self::full()
             .mask_files(from.file().right_all())
             .mask_rank(from.rank())
-    }
-
-    pub fn right_occupancy_ray(from: Position) -> Self {
-        Self::right_ray(from).clear_file(File::H)
     }
 
     pub fn down_right_ray(from: Position) -> Self {
@@ -316,20 +304,10 @@ impl Bitboard {
         )
     }
 
-    pub fn down_right_occupancy_ray(from: Position) -> Self {
-        Self::down_right_ray(from)
-            .clear_file(File::H)
-            .clear_rank(Rank::One)
-    }
-
     pub fn down_ray(from: Position) -> Self {
         Self::full()
             .mask_ranks(from.rank().down_all())
             .mask_file(from.file())
-    }
-
-    pub fn down_occupancy_ray(from: Position) -> Self {
-        Self::down_ray(from).clear_rank(Rank::One)
     }
 
     pub fn down_left_ray(from: Position) -> Self {
@@ -341,20 +319,10 @@ impl Bitboard {
         )
     }
 
-    pub fn down_left_occupancy_ray(from: Position) -> Self {
-        Self::down_left_ray(from)
-            .clear_file(File::A)
-            .clear_rank(Rank::One)
-    }
-
     pub fn left_ray(from: Position) -> Self {
         Self::full()
             .mask_files(from.file().left_all())
             .mask_rank(from.rank())
-    }
-
-    pub fn left_occupancy_ray(from: Position) -> Self {
-        Self::left_ray(from).clear_file(File::A)
     }
 
     pub fn up_left_ray(from: Position) -> Self {
@@ -366,14 +334,81 @@ impl Bitboard {
         )
     }
 
-    pub fn up_left_occupancy_ray(from: Position) -> Self {
-        Self::up_left_ray(from)
-            .clear_rank(Rank::Eight)
-            .clear_file(File::A)
+    pub fn bishop_targets(from: Position, occupancy: Self) -> Self {
+        Self::line_targets(from, occupancy, LineAttack::Slash)
+            | Self::line_targets(from, occupancy, LineAttack::Backslash)
+    }
+
+    pub fn rook_targets(from: Position, occupancy: Self) -> Self {
+        Self::line_targets(from, occupancy, LineAttack::File)
+            | Self::line_targets(from, occupancy, LineAttack::Rank)
+    }
+
+    pub fn queen_targets(from: Position, occupancy: Self) -> Self {
+        Self::bishop_targets(from, occupancy) | Self::rook_targets(from, occupancy)
+    }
+
+    fn line_targets(from: Position, occupancy: Self, line: LineAttack) -> Self {
+        match line {
+            LineAttack::Rank => {
+                let negative = Self::down_ray(from) & occupancy;
+                let negative_ms1b = negative.ms1b();
+
+                let positive = Self::up_ray(from) & occupancy;
+                let positive_ls1b = positive.ls1b();
+
+                negative_ms1b | positive_ls1b
+            }
+            LineAttack::File => {
+                let negative = Self::left_ray(from) & occupancy;
+                let negative_ms1b = negative.ms1b();
+
+                let positive = Self::right_ray(from) & occupancy;
+                let positive_ls1b = positive.ls1b();
+
+                negative_ms1b | positive_ls1b
+            }
+            LineAttack::Slash => {
+                let negative = Self::down_left_ray(from) & occupancy;
+                let negative_ms1b = negative.ms1b();
+
+                let positive = Self::up_right_ray(from) & occupancy;
+                let positive_ls1b = positive.ls1b();
+
+                negative_ms1b | positive_ls1b
+            }
+            LineAttack::Backslash => {
+                let negative = Self::down_right_ray(from) & occupancy;
+                let negative_ms1b = negative.ms1b();
+
+                let positive = Self::up_left_ray(from) & occupancy;
+                let positive_ls1b = positive.ls1b();
+
+                negative_ms1b | positive_ls1b
+            }
+        }
     }
 
     fn data(&self) -> u64 {
         self.0
+    }
+
+    fn ls1b(&self) -> Self {
+        let shifts = self.data().trailing_zeros();
+        if shifts == 64 {
+            Self::empty()
+        } else {
+            Self::construct(1_u64 << shifts)
+        }
+    }
+
+    fn ms1b(&self) -> Self {
+        let shifts = self.data().leading_zeros();
+        if shifts == 64 {
+            Self::empty()
+        } else {
+            Self::construct(1 << (63 - shifts))
+        }
     }
 }
 
@@ -469,6 +504,22 @@ impl BitXorAssign<u64> for Bitboard {
     }
 }
 
+impl Add for Bitboard {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::construct(self.data() + rhs.data())
+    }
+}
+
+impl Sub for Bitboard {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::construct(self.data() - rhs.data())
+    }
+}
+
 impl Debug for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self, f)
@@ -544,6 +595,13 @@ impl_shr!(i128);
 
 impl_shr!(usize);
 impl_shr!(isize);
+
+enum LineAttack {
+    Rank,
+    File,
+    Slash,
+    Backslash,
+}
 
 pub(crate) fn bitboard_index_of(pos: Position) -> usize {
     // A1 is index 0, H8 is index 63
@@ -743,14 +801,6 @@ mod tests {
     }
 
     #[test]
-    fn occupancy_up_ray_test() {
-        assert_eq!(
-            Bitboard::up_occupancy_ray(C5),
-            Bitboard::with_ones([C6, C7].into_iter())
-        );
-    }
-
-    #[test]
     fn up_right_ray_test() {
         assert_eq!(
             Bitboard::up_right_ray(E4),
@@ -764,26 +814,10 @@ mod tests {
     }
 
     #[test]
-    fn up_right_occupancy_ray_test() {
-        assert_eq!(
-            Bitboard::up_right_occupancy_ray(E4),
-            Bitboard::with_ones([F5, G6].into_iter())
-        );
-    }
-
-    #[test]
     fn right_ray_test() {
         assert_eq!(
             Bitboard::right_ray(A7),
             Bitboard::with_ones([B7, C7, D7, E7, F7, G7, H7].into_iter())
-        );
-    }
-
-    #[test]
-    fn right_occupancy_ray_test() {
-        assert_eq!(
-            Bitboard::right_occupancy_ray(A7),
-            Bitboard::with_ones([B7, C7, D7, E7, F7, G7].into_iter())
         );
     }
 
@@ -796,14 +830,6 @@ mod tests {
     }
 
     #[test]
-    fn down_right_occupancy_ray_test() {
-        assert_eq!(
-            Bitboard::down_right_occupancy_ray(C6),
-            Bitboard::with_ones([D5, E4, F3, G2].into_iter())
-        );
-    }
-
-    #[test]
     fn down_ray_test() {
         assert_eq!(
             Bitboard::down_ray(G5),
@@ -812,26 +838,10 @@ mod tests {
     }
 
     #[test]
-    fn down_occupancy_ray_test() {
-        assert_eq!(
-            Bitboard::down_occupancy_ray(G5),
-            Bitboard::with_ones([G4, G3, G2].into_iter())
-        );
-    }
-
-    #[test]
     fn down_left_ray_test() {
         assert_eq!(
             Bitboard::down_left_ray(C7),
             Bitboard::with_ones([B6, A5].into_iter())
-        );
-    }
-
-    #[test]
-    fn down_left_occupancy_ray_test() {
-        assert_eq!(
-            Bitboard::down_left_occupancy_ray(C7),
-            Bitboard::with_ones([B6].into_iter())
         );
     }
 
@@ -846,15 +856,6 @@ mod tests {
     }
 
     #[test]
-    fn left_occupancy_ray_test() {
-        assert_eq!(Bitboard::left_occupancy_ray(A7), Bitboard::empty());
-        assert_eq!(
-            Bitboard::left_occupancy_ray(E4),
-            Bitboard::with_ones([D4, C4, B4].into_iter())
-        );
-    }
-
-    #[test]
     fn up_left_ray_test() {
         assert_eq!(
             Bitboard::up_left_ray(H1),
@@ -863,10 +864,47 @@ mod tests {
     }
 
     #[test]
-    fn up_left_occupancy_ray_test() {
+    fn ls1b_test() {
         assert_eq!(
-            Bitboard::up_left_occupancy_ray(H1),
-            Bitboard::with_ones([G2, F3, E4, D5, C6, B7].into_iter())
+            Bitboard::with_ones([C3, D3, E3].into_iter()).ls1b(),
+            Bitboard::with_one(C3)
+        );
+    }
+
+    #[test]
+    fn ms1b_test() {
+        assert_eq!(
+            Bitboard::with_ones([C3, D3, E3].into_iter()).ms1b(),
+            Bitboard::with_one(E3)
+        );
+    }
+
+    #[test]
+    fn bishop_targets_test() {
+        assert_eq!(
+            Bitboard::bishop_targets(E4, INITIAL_STATE),
+            Bitboard::with_ones([B7, H7, C2, G2].into_iter())
+        );
+    }
+
+    #[test]
+    fn rook_targets_test() {
+        assert_eq!(
+            Bitboard::rook_targets(E4, INITIAL_STATE),
+            Bitboard::with_ones([E7, E2].into_iter())
+        );
+
+        assert_eq!(
+            Bitboard::rook_targets(A1, INITIAL_STATE),
+            Bitboard::with_ones([A2, B1].into_iter())
+        );
+    }
+
+    #[test]
+    fn queen_targets_test() {
+        assert_eq!(
+            Bitboard::queen_targets(E4, INITIAL_STATE),
+            Bitboard::with_ones([B7, E7, H7, C2, E2, G2].into_iter())
         );
     }
 }

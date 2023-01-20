@@ -222,6 +222,12 @@ impl From<File> for u8 {
     }
 }
 
+impl From<File> for usize {
+    fn from(value: File) -> Self {
+        usize::from(u8::from(value))
+    }
+}
+
 impl TryFrom<u8> for File {
     type Error = ();
 
@@ -238,6 +244,18 @@ impl TryFrom<u8> for File {
             7 => H,
             _ => return Err(()),
         })
+    }
+}
+
+impl PartialOrd for File {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for File {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        u8::from(*self).cmp(&u8::from(*other))
     }
 }
 
@@ -291,6 +309,12 @@ impl From<Rank> for u8 {
     }
 }
 
+impl From<Rank> for usize {
+    fn from(value: Rank) -> Self {
+        usize::from(u8::from(value))
+    }
+}
+
 impl TryFrom<u8> for Rank {
     type Error = ();
 
@@ -307,6 +331,18 @@ impl TryFrom<u8> for Rank {
             7 => Eight,
             _ => return Err(()),
         })
+    }
+}
+
+impl PartialOrd for Rank {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Rank {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        u8::from(*self).cmp(&u8::from(*other))
     }
 }
 
