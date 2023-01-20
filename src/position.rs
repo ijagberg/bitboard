@@ -70,6 +70,26 @@ pub const INCREASING: [Position; 64] = [
     D1, D2, D3, D4, D5, D6, D7, D8, E1, E2, E3, E4, E5, E6, E7, E8, F1, F2, F3, F4, F5, F6, F7, F8,
     G1, G2, G3, G4, G5, G6, G7, G8, H1, H2, H3, H4, H5, H6, H7, H8,
 ];
+pub(crate) const ALL_FILES: [File; 8] = [
+    File::A,
+    File::B,
+    File::C,
+    File::D,
+    File::E,
+    File::F,
+    File::G,
+    File::H,
+];
+pub(crate) const ALL_RANKS: [Rank; 8] = [
+    Rank::One,
+    Rank::Two,
+    Rank::Three,
+    Rank::Four,
+    Rank::Five,
+    Rank::Six,
+    Rank::Seven,
+    Rank::Eight,
+];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Position(File, Rank);
@@ -77,6 +97,22 @@ pub struct Position(File, Rank);
 impl Position {
     fn construct(file: File, rank: Rank) -> Self {
         Self(file, rank)
+    }
+
+    pub fn new(file: File, rank: Rank) -> Self {
+        Self::construct(file, rank)
+    }
+
+    pub fn file_iter(file: File) -> impl Iterator<Item = Self> {
+        ALL_RANKS
+            .iter()
+            .map(move |&rank| Self::construct(file, rank))
+    }
+
+    pub fn rank_iter(rank: Rank) -> impl Iterator<Item = Self> {
+        ALL_FILES
+            .iter()
+            .map(move |&file| Self::construct(file, rank))
     }
 
     pub fn file(&self) -> File {
@@ -87,49 +123,49 @@ impl Position {
         self.1
     }
 
-    pub fn north(&self) -> Option<Self> {
+    pub fn up(&self) -> Option<Self> {
         let file = self.file();
         let rank = self.rank().up()?;
         Some(Self::construct(file, rank))
     }
 
-    pub fn north_east(&self) -> Option<Self> {
+    pub fn up_right(&self) -> Option<Self> {
         let file = self.file().right()?;
         let rank = self.rank().up()?;
         Some(Self::construct(file, rank))
     }
 
-    pub fn east(&self) -> Option<Self> {
+    pub fn right(&self) -> Option<Self> {
         let file = self.file().right()?;
         let rank = self.rank();
         Some(Self::construct(file, rank))
     }
 
-    pub fn south_east(&self) -> Option<Self> {
+    pub fn down_right(&self) -> Option<Self> {
         let file = self.file().right()?;
         let rank = self.rank().down()?;
         Some(Self::construct(file, rank))
     }
 
-    pub fn south(&self) -> Option<Self> {
+    pub fn down(&self) -> Option<Self> {
         let file = self.file();
         let rank = self.rank().down()?;
         Some(Self::construct(file, rank))
     }
 
-    pub fn south_west(&self) -> Option<Self> {
+    pub fn down_left(&self) -> Option<Self> {
         let file = self.file().left()?;
         let rank = self.rank().down()?;
         Some(Self::construct(file, rank))
     }
 
-    pub fn west(&self) -> Option<Self> {
+    pub fn left(&self) -> Option<Self> {
         let file = self.file().left()?;
         let rank = self.rank();
         Some(Self::construct(file, rank))
     }
 
-    pub fn north_west(&self) -> Option<Self> {
+    pub fn up_left(&self) -> Option<Self> {
         let file = self.file().left()?;
         let rank = self.rank().up()?;
         Some(Self::construct(file, rank))
@@ -153,8 +189,21 @@ impl File {
         Self::try_from(u8::from(*self) - 1).ok()
     }
 
+    pub fn left_all(&self) -> impl Iterator<Item = Self> {
+        ALL_FILES[..usize::from(u8::from(*self))]
+            .iter()
+            .copied()
+            .rev()
+    }
+
     pub fn right(&self) -> Option<Self> {
         Self::try_from(u8::from(*self) + 1).ok()
+    }
+
+    pub fn right_all(&self) -> impl Iterator<Item = Self> {
+        ALL_FILES[usize::from(u8::from(*self)) + 1..]
+            .iter()
+            .copied()
     }
 }
 
@@ -209,8 +258,21 @@ impl Rank {
         Self::try_from(u8::from(*self) + 1).ok()
     }
 
+    pub fn up_all(&self) -> impl Iterator<Item = Self> {
+        ALL_RANKS[usize::from(u8::from(*self)) + 1..]
+            .iter()
+            .copied()
+    }
+
     pub fn down(&self) -> Option<Self> {
         Self::try_from(u8::from(*self) - 1).ok()
+    }
+
+    pub fn down_all(&self) -> impl Iterator<Item = Self> {
+        ALL_RANKS[..usize::from(u8::from(*self))]
+            .iter()
+            .copied()
+            .rev()
     }
 }
 
@@ -254,13 +316,33 @@ mod tests {
 
     #[test]
     fn directions_test() {
-        assert_eq!(E4.north(), Some(E5));
-        assert_eq!(E4.north_east(), Some(F5));
-        assert_eq!(E4.east(), Some(F4));
-        assert_eq!(E4.south_east(), Some(F3));
-        assert_eq!(E4.south(), Some(E3));
-        assert_eq!(E4.south_west(), Some(D3));
-        assert_eq!(E4.west(), Some(D4));
-        assert_eq!(E4.north_west(), Some(D5));
+        assert_eq!(E4.up(), Some(E5));
+        assert_eq!(E4.up_right(), Some(F5));
+        assert_eq!(E4.right(), Some(F4));
+        assert_eq!(E4.down_right(), Some(F3));
+        assert_eq!(E4.down(), Some(E3));
+        assert_eq!(E4.down_left(), Some(D3));
+        assert_eq!(E4.left(), Some(D4));
+        assert_eq!(E4.up_left(), Some(D5));
+    }
+
+    #[test]
+    fn file_directions_test() {
+        assert_eq!(
+            File::E.left_all().collect::<Vec<_>>(),
+            vec![File::D, File::C, File::B, File::A]
+        );
+    }
+
+    #[test]
+    fn file_iter_test() {
+        let positions: Vec<Position> = Position::file_iter(File::C).collect();
+        assert_eq!(positions, vec![C1, C2, C3, C4, C5, C6, C7, C8]);
+    }
+
+    #[test]
+    fn rank_iter_test() {
+        let positions: Vec<Position> = Position::rank_iter(Rank::Seven).collect();
+        assert_eq!(positions, vec![A7, B7, C7, D7, E7, F7, G7, H7]);
     }
 }
