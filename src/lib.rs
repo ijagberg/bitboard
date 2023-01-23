@@ -1,4 +1,6 @@
-use position::*;
+#![allow(unused)]
+
+pub use position::*;
 use std::{
     fmt::{Debug, Display},
     ops::{
@@ -6,7 +8,7 @@ use std::{
     },
 };
 
-pub mod position;
+mod position;
 
 pub const INITIAL_STATE: Bitboard =
     Bitboard(0b1111111111111111000000000000000000000000000000001111111111111111);
@@ -83,6 +85,10 @@ impl Bitboard {
         Self(v)
     }
 
+    pub fn new(v: u64) -> Self {
+        Self::construct(v)
+    }
+
     pub fn full() -> Self {
         !Self::empty()
     }
@@ -95,7 +101,7 @@ impl Bitboard {
         Self::construct(1 << bitboard_index_of(pos))
     }
 
-    pub fn with_ones(positions: impl Iterator<Item = Position>) -> Self {
+    pub fn with_ones(positions: impl IntoIterator<Item = Position>) -> Self {
         let mut s = Self(0);
         for pos in positions {
             s |= Self::with_one(pos);
@@ -113,7 +119,7 @@ impl Bitboard {
         self & Self::with_one(pos)
     }
 
-    pub fn mask_positions(self, positions: impl Iterator<Item = Position>) -> Self {
+    pub fn mask_positions(self, positions: impl IntoIterator<Item = Position>) -> Self {
         let mut include = Self::empty();
         for pos in positions {
             include |= Self::with_one(pos);
@@ -126,10 +132,10 @@ impl Bitboard {
         self & !Self::with_one(pos)
     }
 
-    pub fn clear_positions(self, positions: &[Position]) -> Self {
+    pub fn clear_positions(self, positions: impl IntoIterator<Item = Position>) -> Self {
         let mut clear = Self::full();
         for pos in positions {
-            clear &= !Self::with_one(*pos);
+            clear &= !Self::with_one(pos);
         }
 
         self & clear
@@ -152,7 +158,7 @@ impl Bitboard {
         self & Self::mask_file_bitboard(file)
     }
 
-    pub fn mask_files(self, files: impl Iterator<Item = File>) -> Self {
+    pub fn mask_files(self, files: impl IntoIterator<Item = File>) -> Self {
         let mut mask = Bitboard::empty();
         for file in files {
             mask |= Self::mask_file_bitboard(file)
@@ -178,7 +184,7 @@ impl Bitboard {
         self & Self::clear_file_bitboard(file)
     }
 
-    pub fn clear_files(self, files: impl Iterator<Item = File>) -> Self {
+    pub fn clear_files(self, files: impl IntoIterator<Item = File>) -> Self {
         let mut clear = Bitboard::full();
         for file in files {
             clear &= Self::clear_file_bitboard(file)
@@ -204,7 +210,7 @@ impl Bitboard {
         self & Self::mask_rank_bitboard(rank)
     }
 
-    pub fn mask_ranks(self, ranks: impl Iterator<Item = Rank>) -> Self {
+    pub fn mask_ranks(self, ranks: impl IntoIterator<Item = Rank>) -> Self {
         let mut mask = Bitboard::empty();
         for rank in ranks {
             mask |= Self::mask_rank_bitboard(rank)
@@ -230,48 +236,13 @@ impl Bitboard {
         self & Self::clear_rank_bitboard(rank)
     }
 
-    pub fn clear_ranks(self, ranks: &[Rank]) -> Self {
+    pub fn clear_ranks(self, ranks: impl IntoIterator<Item = Rank>) -> Self {
         let mut clear = Bitboard::full();
         for rank in ranks {
-            clear &= Self::clear_rank_bitboard(*rank);
+            clear &= Self::clear_rank_bitboard(rank);
         }
 
         self & clear
-    }
-
-    pub fn king_targets(pos: Position) -> Self {
-        let king_bb = Bitboard::with_one(pos);
-        let up = king_bb << 8_u64;
-        let up_right = (king_bb << 9_u64).clear_file(File::A);
-        let right = (king_bb << 1_u64).clear_file(File::A);
-        let down_right = (king_bb >> 7_u64).clear_file(File::A);
-        let down = king_bb >> 8_u64;
-        let down_left = (king_bb >> 9_u64).clear_file(File::H);
-        let left = king_bb >> 1_u64;
-        let up_left = (king_bb << 7_u64).clear_file(File::H);
-
-        up | up_right | right | down_right | down | down_left | left | up_left
-    }
-
-    pub fn knight_targets(pos: Position) -> Self {
-        let knight_bb = Bitboard::with_one(pos);
-        let up_2_right_1 = (knight_bb << 17_u64).clear_file(File::A);
-        let right_2_up_1 = (knight_bb << 10_u64).clear_files([File::A, File::B].into_iter());
-        let right_2_down_1 = (knight_bb >> 6_u64).clear_files([File::A, File::B].into_iter());
-        let down_2_right_1 = (knight_bb >> 15_u64).clear_file(File::A);
-        let down_2_left_1 = (knight_bb >> 17_u64).clear_file(File::H);
-        let left_2_down_1 = (knight_bb >> 10_u64).clear_files([File::G, File::H].into_iter());
-        let left_2_up_1 = (knight_bb << 6_u64).clear_files([File::G, File::H].into_iter());
-        let up_2_left_1 = (knight_bb << 15_u64).clear_file(File::H);
-
-        up_2_right_1
-            | right_2_up_1
-            | right_2_down_1
-            | down_2_right_1
-            | down_2_left_1
-            | left_2_down_1
-            | left_2_up_1
-            | up_2_left_1
     }
 
     pub fn up_ray(from: Position) -> Self {
@@ -334,57 +305,190 @@ impl Bitboard {
         )
     }
 
+    pub fn white_pawn_targets(pos: Position, enemy_occupancy: Self) -> Self {
+        let pos_bb = Self::with_one(pos);
+        let mut targets = (pos_bb << 8) & !enemy_occupancy;
+        if targets != 0 && pos.rank() == Rank::Two {
+            targets |= (pos_bb << 16) & !enemy_occupancy;
+        }
+
+        let up_left = (pos_bb << 7) & enemy_occupancy;
+        let up_right = (pos_bb << 9) & enemy_occupancy;
+        targets | up_left | up_right
+    }
+
+    pub fn black_pawn_targets(pos: Position, enemy_occupancy: Self) -> Self {
+        let pos_bb = Self::with_one(pos);
+        let mut targets = (pos_bb >> 8) & !enemy_occupancy;
+        if targets != 0 && pos.rank() == Rank::Seven {
+            targets |= (pos_bb >> 16) & !enemy_occupancy;
+        }
+
+        let down_left = (pos_bb >> 9) & enemy_occupancy;
+        let down_right = (pos_bb >> 7) & enemy_occupancy;
+        targets | down_left | down_right
+    }
+
+    pub fn king_targets(pos: Position) -> Self {
+        let king_bb = Bitboard::with_one(pos);
+        let up = king_bb << 8;
+        let up_right = (king_bb << 9).clear_file(File::A);
+        let right = (king_bb << 1).clear_file(File::A);
+        let down_right = (king_bb >> 7).clear_file(File::A);
+        let down = king_bb >> 8;
+        let down_left = (king_bb >> 9).clear_file(File::H);
+        let left = king_bb >> 1;
+        let up_left = (king_bb << 7).clear_file(File::H);
+
+        up | up_right | right | down_right | down | down_left | left | up_left
+    }
+
+    pub fn knight_targets(pos: Position) -> Self {
+        let knight_bb = Bitboard::with_one(pos);
+        let up_2_right_1 = (knight_bb << 17).clear_file(File::A);
+        let right_2_up_1 = (knight_bb << 10).clear_files([File::A, File::B]);
+        let right_2_down_1 = (knight_bb >> 6).clear_files([File::A, File::B]);
+        let down_2_right_1 = (knight_bb >> 15).clear_file(File::A);
+        let down_2_left_1 = (knight_bb >> 17).clear_file(File::H);
+        let left_2_down_1 = (knight_bb >> 10).clear_files([File::G, File::H]);
+        let left_2_up_1 = (knight_bb << 6).clear_files([File::G, File::H]);
+        let up_2_left_1 = (knight_bb << 15).clear_file(File::H);
+
+        up_2_right_1
+            | right_2_up_1
+            | right_2_down_1
+            | down_2_right_1
+            | down_2_left_1
+            | left_2_down_1
+            | left_2_up_1
+            | up_2_left_1
+    }
+
     pub fn bishop_targets(from: Position, occupancy: Self) -> Self {
-        Self::line_targets(from, occupancy, LineAttack::Slash)
-            | Self::line_targets(from, occupancy, LineAttack::Backslash)
+        (Self::line_targets(from, occupancy, LineAttack::Slash)
+            | Self::line_targets(from, occupancy, LineAttack::Backslash))
+        .clear_position(from)
     }
 
     pub fn rook_targets(from: Position, occupancy: Self) -> Self {
-        Self::line_targets(from, occupancy, LineAttack::File)
-            | Self::line_targets(from, occupancy, LineAttack::Rank)
+        (Self::line_targets(from, occupancy, LineAttack::File)
+            | Self::line_targets(from, occupancy, LineAttack::Rank))
+        .clear_position(from)
     }
 
     pub fn queen_targets(from: Position, occupancy: Self) -> Self {
-        Self::bishop_targets(from, occupancy) | Self::rook_targets(from, occupancy)
+        (Self::bishop_targets(from, occupancy) | Self::rook_targets(from, occupancy))
+            .clear_position(from)
+    }
+
+    pub fn positions(self) -> Vec<Position> {
+        let mut positions = Vec::with_capacity(64);
+
+        for shift in 0..64 {
+            let bit_at = self & (1 << shift);
+            if bit_at != 0 {
+                let file = File::try_from(shift % 8).unwrap();
+                let rank = Rank::try_from(shift / 8).unwrap();
+                positions.push(Position::new(file, rank));
+            }
+        }
+        positions
     }
 
     fn line_targets(from: Position, occupancy: Self, line: LineAttack) -> Self {
+        let from_bb = Bitboard::with_one(from);
         match line {
             LineAttack::Rank => {
-                let negative = Self::down_ray(from) & occupancy;
-                let negative_ms1b = negative.ms1b();
-
-                let positive = Self::up_ray(from) & occupancy;
-                let positive_ls1b = positive.ls1b();
-
-                negative_ms1b | positive_ls1b
-            }
-            LineAttack::File => {
                 let negative = Self::left_ray(from) & occupancy;
                 let negative_ms1b = negative.ms1b();
 
                 let positive = Self::right_ray(from) & occupancy;
                 let positive_ls1b = positive.ls1b();
 
-                negative_ms1b | positive_ls1b
+                let ends = negative_ms1b | positive_ls1b;
+
+                let bb = ((Self::full() >> ends.data().leading_zeros())
+                    & (Self::full() << ends.data().trailing_zeros()));
+                if bb == 0 {
+                    Self::full().mask_rank(from.rank())
+                } else {
+                    bb.mask_rank(from.rank())
+                }
+            }
+            LineAttack::File => {
+                let negative = Self::down_ray(from) & occupancy;
+                let negative_ms1b = negative.ms1b();
+
+                let positive = Self::up_ray(from) & occupancy;
+                let positive_ls1b = positive.ls1b();
+
+                let ends = negative_ms1b | positive_ls1b;
+
+                let bb = ((Self::full() >> ends.data().leading_zeros())
+                    & (Self::full() << ends.data().trailing_zeros()));
+                if bb == 0 {
+                    Self::full().mask_file(from.file())
+                } else {
+                    bb.mask_file(from.file())
+                }
             }
             LineAttack::Slash => {
-                let negative = Self::down_left_ray(from) & occupancy;
-                let negative_ms1b = negative.ms1b();
-
-                let positive = Self::up_right_ray(from) & occupancy;
+                let up_right_ray = Self::up_right_ray(from);
+                let positive = up_right_ray & occupancy;
                 let positive_ls1b = positive.ls1b();
+                let left = if positive_ls1b == 0 {
+                    up_right_ray.ms1b()
+                } else {
+                    positive_ls1b
+                };
 
-                negative_ms1b | positive_ls1b
+                let down_left_ray = Self::down_left_ray(from);
+                let negative = down_left_ray & occupancy;
+                let negative_ms1b = negative.ms1b();
+                let right = if negative_ms1b == 0 {
+                    down_left_ray.ls1b()
+                } else {
+                    negative_ms1b
+                };
+
+                let ends = left | right;
+
+                let leading_zeros =
+                    std::cmp::min(ends.data().leading_zeros(), from_bb.data().leading_zeros());
+                let trailing_zeros = std::cmp::min(
+                    ends.data().trailing_zeros(),
+                    from_bb.data().trailing_zeros(),
+                );
+                let bb = ((Self::full() >> leading_zeros) & (Self::full() << trailing_zeros));
+                if bb == 0 {
+                    Self::full() & (down_left_ray | up_right_ray)
+                } else {
+                    bb & (down_left_ray | up_right_ray)
+                }
             }
             LineAttack::Backslash => {
-                let negative = Self::down_right_ray(from) & occupancy;
+                let down_right_ray = Self::down_right_ray(from);
+                let negative = down_right_ray & occupancy;
                 let negative_ms1b = negative.ms1b();
 
-                let positive = Self::up_left_ray(from) & occupancy;
+                let up_left_ray = Self::up_left_ray(from);
+                let positive = up_left_ray & occupancy;
                 let positive_ls1b = positive.ls1b();
 
-                negative_ms1b | positive_ls1b
+                let ends = negative_ms1b | positive_ls1b;
+
+                let leading_zeros =
+                    std::cmp::min(ends.data().leading_zeros(), from_bb.data().leading_zeros());
+                let trailing_zeros = std::cmp::min(
+                    ends.data().trailing_zeros(),
+                    from_bb.data().trailing_zeros(),
+                );
+                let bb = ((Self::full() >> leading_zeros) & (Self::full() << trailing_zeros));
+                if bb == 0 {
+                    Self::full() & (down_right_ray | up_left_ray)
+                } else {
+                    bb & (down_right_ray | up_left_ray)
+                }
             }
         }
     }
@@ -436,6 +540,14 @@ impl BitOr<u64> for Bitboard {
     }
 }
 
+impl BitOr<Position> for Bitboard {
+    type Output = Self;
+
+    fn bitor(self, rhs: Position) -> Self::Output {
+        self.bitor(Self::with_one(rhs))
+    }
+}
+
 impl BitOrAssign for Bitboard {
     fn bitor_assign(&mut self, rhs: Self) {
         *self = self.bitor(rhs);
@@ -444,6 +556,12 @@ impl BitOrAssign for Bitboard {
 
 impl BitOrAssign<u64> for Bitboard {
     fn bitor_assign(&mut self, rhs: u64) {
+        *self = self.bitor(rhs)
+    }
+}
+
+impl BitOrAssign<Position> for Bitboard {
+    fn bitor_assign(&mut self, rhs: Position) {
         *self = self.bitor(rhs)
     }
 }
@@ -460,7 +578,15 @@ impl BitAnd<u64> for Bitboard {
     type Output = Self;
 
     fn bitand(self, rhs: u64) -> Self::Output {
-        Self::construct(self.data().bitor(rhs))
+        Self::construct(self.data().bitand(rhs))
+    }
+}
+
+impl BitAnd<Position> for Bitboard {
+    type Output = Self;
+
+    fn bitand(self, rhs: Position) -> Self::Output {
+        self.bitand(Self::with_one(rhs))
     }
 }
 
@@ -473,6 +599,12 @@ impl BitAndAssign for Bitboard {
 impl BitAndAssign<u64> for Bitboard {
     fn bitand_assign(&mut self, rhs: u64) {
         *self = self.bitand(rhs);
+    }
+}
+
+impl BitAndAssign<Position> for Bitboard {
+    fn bitand_assign(&mut self, rhs: Position) {
+        *self = self.bitand(rhs)
     }
 }
 
@@ -492,6 +624,14 @@ impl BitXor<u64> for Bitboard {
     }
 }
 
+impl BitXor<Position> for Bitboard {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Position) -> Self::Output {
+        self.bitxor(Self::with_one(rhs))
+    }
+}
+
 impl BitXorAssign for Bitboard {
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = self.bitxor(rhs)
@@ -500,6 +640,12 @@ impl BitXorAssign for Bitboard {
 
 impl BitXorAssign<u64> for Bitboard {
     fn bitxor_assign(&mut self, rhs: u64) {
+        *self = self.bitxor(rhs)
+    }
+}
+
+impl BitXorAssign<Position> for Bitboard {
+    fn bitxor_assign(&mut self, rhs: Position) {
         *self = self.bitxor(rhs)
     }
 }
@@ -520,6 +666,18 @@ impl Sub for Bitboard {
     }
 }
 
+impl PartialEq<u64> for Bitboard {
+    fn eq(&self, other: &u64) -> bool {
+        self.0 == *other
+    }
+}
+
+impl PartialOrd<u64> for Bitboard {
+    fn partial_cmp(&self, other: &u64) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(&other)
+    }
+}
+
 impl Debug for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self, f)
@@ -530,7 +688,7 @@ impl Display for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let chars: Vec<char> = format!("{:064b}", self.data()).chars().collect();
 
-        let mut output = vec![String::from("  abcdefgh")];
+        let mut output = vec![String::from("  ABCDEFGH")];
         for (idx, chunk) in chars.chunks(8).enumerate() {
             let mut line = String::with_capacity(10);
             line.push_str(&format!("{} ", 8 - idx));
@@ -542,59 +700,21 @@ impl Display for Bitboard {
     }
 }
 
-macro_rules! impl_shl {
-    ($type:ty) => {
-        impl Shl<$type> for Bitboard {
-            type Output = Self;
+impl Shl<u32> for Bitboard {
+    type Output = Self;
 
-            fn shl(self, rhs: $type) -> Self {
-                Self(self.data().shl(rhs))
-            }
-        }
-    };
+    fn shl(self, rhs: u32) -> Self {
+        Self(self.data().checked_shl(rhs).unwrap_or(0))
+    }
 }
 
-impl_shl!(u8);
-impl_shl!(u16);
-impl_shl!(u32);
-impl_shl!(u64);
-impl_shl!(u128);
+impl Shr<u32> for Bitboard {
+    type Output = Self;
 
-impl_shl!(i8);
-impl_shl!(i16);
-impl_shl!(i32);
-impl_shl!(i64);
-impl_shl!(i128);
-
-impl_shl!(usize);
-impl_shl!(isize);
-
-macro_rules! impl_shr {
-    ($type:ty) => {
-        impl Shr<$type> for Bitboard {
-            type Output = Self;
-
-            fn shr(self, rhs: $type) -> Self {
-                Self(self.data().shr(rhs))
-            }
-        }
-    };
+    fn shr(self, rhs: u32) -> Self {
+        Self(self.data().checked_shr(rhs).unwrap_or(0))
+    }
 }
-
-impl_shr!(u8);
-impl_shr!(u16);
-impl_shr!(u32);
-impl_shr!(u64);
-impl_shr!(u128);
-
-impl_shr!(i8);
-impl_shr!(i16);
-impl_shr!(i32);
-impl_shr!(i64);
-impl_shr!(i128);
-
-impl_shr!(usize);
-impl_shr!(isize);
 
 enum LineAttack {
     Rank,
@@ -636,7 +756,7 @@ mod tests {
         let b3 = Bitboard::with_one(B3);
         let a4_or_b3 = a4 | b3;
 
-        assert_eq!(a4_or_b3, Bitboard::with_ones([A4, B3].into_iter()));
+        assert_eq!(a4_or_b3, Bitboard::with_ones([A4, B3]));
 
         let mut empty = Bitboard::empty();
         empty |= a4;
@@ -646,7 +766,7 @@ mod tests {
     #[test]
     fn bitand_test() {
         let a4 = Bitboard::with_one(A4);
-        let a4_and_g6 = Bitboard::with_ones([A4, G6].into_iter());
+        let a4_and_g6 = Bitboard::with_ones([A4, G6]);
         let only_a4 = a4 & a4_and_g6;
 
         assert_eq!(only_a4, a4);
@@ -658,7 +778,7 @@ mod tests {
 
     #[test]
     fn bitxor_test() {
-        let a4_and_b3 = Bitboard::with_ones([A4, B3].into_iter());
+        let a4_and_b3 = Bitboard::with_ones([A4, B3]);
         let a4 = Bitboard::with_one(A4);
         let only_b3 = a4 ^ a4_and_b3;
 
@@ -676,21 +796,15 @@ mod tests {
 
     #[test]
     fn mask_files_test() {
-        let file_b_and_e = INITIAL_STATE.mask_files([File::B, File::E].into_iter());
+        let file_b_and_e = INITIAL_STATE.mask_files([File::B, File::E]);
         assert_eq!(
             file_b_and_e,
             Bitboard::construct(0b0001001000010010000000000000000000000000000000000001001000010010)
         );
 
-        assert_eq!(
-            Bitboard::empty(),
-            Bitboard::full().mask_files([].into_iter())
-        );
+        assert_eq!(Bitboard::empty(), Bitboard::full().mask_files([]));
 
-        assert_eq!(
-            Bitboard::full(),
-            Bitboard::full().mask_files(ALL_FILES.into_iter())
-        );
+        assert_eq!(Bitboard::full(), Bitboard::full().mask_files(ALL_FILES));
     }
 
     #[test]
@@ -704,7 +818,7 @@ mod tests {
 
     #[test]
     fn clear_files_test() {
-        let no_file_b_or_e = INITIAL_STATE.clear_files([File::B, File::E].into_iter());
+        let no_file_b_or_e = INITIAL_STATE.clear_files([File::B, File::E]);
         assert_eq!(
             no_file_b_or_e,
             Bitboard::construct(0b1110110111101101000000000000000000000000000000001110110111101101)
@@ -722,21 +836,15 @@ mod tests {
 
     #[test]
     fn mask_ranks_test() {
-        let rank_2_and_8 = INITIAL_STATE.mask_ranks([Rank::Two, Rank::Eight].into_iter());
+        let rank_2_and_8 = INITIAL_STATE.mask_ranks([Rank::Two, Rank::Eight]);
         assert_eq!(
             rank_2_and_8,
             Bitboard::construct(0b1111111100000000000000000000000000000000000000001111111100000000)
         );
 
-        assert_eq!(
-            Bitboard::empty(),
-            Bitboard::full().mask_ranks([].into_iter())
-        );
+        assert_eq!(Bitboard::empty(), Bitboard::full().mask_ranks([]));
 
-        assert_eq!(
-            Bitboard::full(),
-            Bitboard::full().mask_ranks(ALL_RANKS.into_iter())
-        );
+        assert_eq!(Bitboard::full(), Bitboard::full().mask_ranks(ALL_RANKS));
     }
 
     #[test]
@@ -750,16 +858,13 @@ mod tests {
 
     #[test]
     fn clear_ranks_test() {
-        let no_rank_2_or_7 = INITIAL_STATE.clear_ranks(&[Rank::Two, Rank::Seven]);
+        let no_rank_2_or_7 = INITIAL_STATE.clear_ranks([Rank::Two, Rank::Seven]);
         assert_eq!(
             no_rank_2_or_7,
             Bitboard::construct(0b1111111100000000000000000000000000000000000000000000000011111111)
         );
 
-        assert_eq!(
-            Bitboard::empty(),
-            Bitboard::full().clear_files(ALL_FILES.into_iter())
-        );
+        assert_eq!(Bitboard::empty(), Bitboard::full().clear_files(ALL_FILES));
     }
 
     #[test]
@@ -767,13 +872,13 @@ mod tests {
         let targets_of_e2 = Bitboard::king_targets(E2);
         assert_eq!(
             targets_of_e2,
-            Bitboard::full().mask_positions([E3, F3, F2, F1, E1, D1, D2, D3].into_iter())
+            Bitboard::full().mask_positions([E3, F3, F2, F1, E1, D1, D2, D3])
         );
 
         let targets_of_g8 = Bitboard::king_targets(G8);
         assert_eq!(
             targets_of_g8,
-            Bitboard::full().mask_positions([H8, H7, G7, F7, F8].into_iter())
+            Bitboard::full().mask_positions([H8, H7, G7, F7, F8])
         );
     }
 
@@ -782,34 +887,29 @@ mod tests {
         let targets_of_e5 = Bitboard::knight_targets(E5);
         assert_eq!(
             targets_of_e5,
-            Bitboard::full().mask_positions([F7, G6, G4, F3, D3, C4, C6, D7].into_iter())
+            Bitboard::full().mask_positions([F7, G6, G4, F3, D3, C4, C6, D7])
         );
 
         let targets_of_a1 = Bitboard::knight_targets(A1);
-        assert_eq!(
-            targets_of_a1,
-            Bitboard::full().mask_positions([B3, C2].into_iter())
-        );
+        assert_eq!(targets_of_a1, Bitboard::full().mask_positions([B3, C2]));
     }
 
     #[test]
     fn up_ray_test() {
-        assert_eq!(
-            Bitboard::up_ray(C5),
-            Bitboard::with_ones([C6, C7, C8].into_iter())
-        );
+        assert_eq!(Bitboard::up_ray(C5), Bitboard::with_ones([C6, C7, C8]));
     }
 
     #[test]
     fn up_right_ray_test() {
         assert_eq!(
             Bitboard::up_right_ray(E4),
-            Bitboard::with_ones([F5, G6, H7].into_iter())
+            Bitboard::with_ones([F5, G6, H7])
         );
 
+        assert_eq!(Bitboard::up_right_ray(H7), Bitboard::with_ones([]));
         assert_eq!(
-            Bitboard::up_right_ray(H7),
-            Bitboard::with_ones([].into_iter())
+            Bitboard::up_right_ray(A4),
+            Bitboard::with_ones([B5, C6, D7, E8])
         );
     }
 
@@ -817,7 +917,7 @@ mod tests {
     fn right_ray_test() {
         assert_eq!(
             Bitboard::right_ray(A7),
-            Bitboard::with_ones([B7, C7, D7, E7, F7, G7, H7].into_iter())
+            Bitboard::with_ones([B7, C7, D7, E7, F7, G7, H7])
         );
     }
 
@@ -825,7 +925,7 @@ mod tests {
     fn down_right_ray_test() {
         assert_eq!(
             Bitboard::down_right_ray(C6),
-            Bitboard::with_ones([D5, E4, F3, G2, H1].into_iter())
+            Bitboard::with_ones([D5, E4, F3, G2, H1])
         );
     }
 
@@ -833,16 +933,14 @@ mod tests {
     fn down_ray_test() {
         assert_eq!(
             Bitboard::down_ray(G5),
-            Bitboard::with_ones([G4, G3, G2, G1].into_iter())
+            Bitboard::with_ones([G4, G3, G2, G1])
         );
     }
 
     #[test]
     fn down_left_ray_test() {
-        assert_eq!(
-            Bitboard::down_left_ray(C7),
-            Bitboard::with_ones([B6, A5].into_iter())
-        );
+        assert_eq!(Bitboard::down_left_ray(C7), Bitboard::with_ones([B6, A5]));
+        assert_eq!(Bitboard::down_left_ray(A4), Bitboard::empty());
     }
 
     #[test]
@@ -851,7 +949,7 @@ mod tests {
 
         assert_eq!(
             Bitboard::left_ray(E4),
-            Bitboard::with_ones([D4, C4, B4, A4].into_iter())
+            Bitboard::with_ones([D4, C4, B4, A4])
         );
     }
 
@@ -859,14 +957,14 @@ mod tests {
     fn up_left_ray_test() {
         assert_eq!(
             Bitboard::up_left_ray(H1),
-            Bitboard::with_ones([G2, F3, E4, D5, C6, B7, A8].into_iter())
+            Bitboard::with_ones([G2, F3, E4, D5, C6, B7, A8])
         );
     }
 
     #[test]
     fn ls1b_test() {
         assert_eq!(
-            Bitboard::with_ones([C3, D3, E3].into_iter()).ls1b(),
+            Bitboard::with_ones([C3, D3, E3]).ls1b(),
             Bitboard::with_one(C3)
         );
     }
@@ -874,8 +972,39 @@ mod tests {
     #[test]
     fn ms1b_test() {
         assert_eq!(
-            Bitboard::with_ones([C3, D3, E3].into_iter()).ms1b(),
+            Bitboard::with_ones([C3, D3, E3]).ms1b(),
             Bitboard::with_one(E3)
+        );
+    }
+
+    #[test]
+    fn white_pawn_targets_test() {
+        assert_eq!(
+            Bitboard::white_pawn_targets(E2, INITIAL_STATE),
+            Bitboard::with_ones([E3, E4])
+        );
+
+        assert_eq!(
+            Bitboard::white_pawn_targets(E6, INITIAL_STATE.mask_ranks([Rank::Seven, Rank::Eight])),
+            Bitboard::with_ones([D7, F7])
+        );
+    }
+
+    #[test]
+    fn black_pawn_targets_test() {
+        assert_eq!(
+            Bitboard::black_pawn_targets(A7, INITIAL_STATE),
+            Bitboard::with_ones([A6, A5])
+        );
+
+        assert_eq!(
+            Bitboard::black_pawn_targets(H6, INITIAL_STATE.mask_ranks([Rank::One, Rank::Two])),
+            Bitboard::with_ones([H5])
+        );
+
+        assert_eq!(
+            Bitboard::black_pawn_targets(H3, INITIAL_STATE.mask_ranks([Rank::One, Rank::Two])),
+            Bitboard::with_ones([G2])
         );
     }
 
@@ -883,7 +1012,12 @@ mod tests {
     fn bishop_targets_test() {
         assert_eq!(
             Bitboard::bishop_targets(E4, INITIAL_STATE),
-            Bitboard::with_ones([B7, H7, C2, G2].into_iter())
+            Bitboard::with_ones([B7, H7, C6, G6, D5, F5, D3, F3, C2, G2])
+        );
+
+        assert_eq!(
+            Bitboard::bishop_targets(F4, INITIAL_STATE),
+            Bitboard::with_ones([D2, H2, E3, G3, E5, G5, D6, H6, C7])
         );
     }
 
@@ -891,12 +1025,12 @@ mod tests {
     fn rook_targets_test() {
         assert_eq!(
             Bitboard::rook_targets(E4, INITIAL_STATE),
-            Bitboard::with_ones([E7, E2].into_iter())
+            Bitboard::with_ones([E2, E3, E5, E6, E7, A4, B4, C4, D4, F4, G4, H4])
         );
 
         assert_eq!(
             Bitboard::rook_targets(A1, INITIAL_STATE),
-            Bitboard::with_ones([A2, B1].into_iter())
+            Bitboard::with_ones([A2, B1])
         );
     }
 
@@ -904,7 +1038,27 @@ mod tests {
     fn queen_targets_test() {
         assert_eq!(
             Bitboard::queen_targets(E4, INITIAL_STATE),
-            Bitboard::with_ones([B7, E7, H7, C2, E2, G2].into_iter())
+            Bitboard::with_ones([
+                B7, E7, H7, C6, E6, G6, D5, E5, F5, A4, B4, C4, D4, F4, G4, H4, D3, E3, F3, C2, E2,
+                G2
+            ])
+        );
+        assert_eq!(
+            Bitboard::queen_targets(A4, INITIAL_STATE),
+            Bitboard::with_ones([
+                A7, D7, A6, C6, A5, B5, B4, C4, D4, E4, F4, G4, H4, A3, B3, A2, C2
+            ])
+        );
+    }
+
+    #[test]
+    fn positions_test() {
+        assert_eq!(
+            INITIAL_STATE.positions(),
+            vec![
+                A1, B1, C1, D1, E1, F1, G1, H1, A2, B2, C2, D2, E2, F2, G2, H2, A7, B7, C7, D7, E7,
+                F7, G7, H7, A8, B8, C8, D8, E8, F8, G8, H8
+            ]
         );
     }
 }
