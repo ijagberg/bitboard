@@ -305,27 +305,27 @@ impl Bitboard {
         )
     }
 
-    pub fn white_pawn_targets(pos: Position, enemy_occupancy: Self) -> Self {
+    pub fn white_pawn_targets(pos: Position, occupancy: Self) -> Self {
         let pos_bb = Self::with_one(pos);
-        let mut targets = (pos_bb << 8) & !enemy_occupancy;
+        let mut targets = (pos_bb << 8) & !occupancy;
         if targets != 0 && pos.rank() == Rank::Two {
-            targets |= (pos_bb << 16) & !enemy_occupancy;
+            targets |= (pos_bb << 16) & !occupancy;
         }
 
-        let up_left = (pos_bb << 7) & enemy_occupancy;
-        let up_right = (pos_bb << 9) & enemy_occupancy;
+        let up_left = (pos_bb << 7) & occupancy;
+        let up_right = (pos_bb << 9) & occupancy;
         targets | up_left | up_right
     }
 
-    pub fn black_pawn_targets(pos: Position, enemy_occupancy: Self) -> Self {
+    pub fn black_pawn_targets(pos: Position, occupancy: Self) -> Self {
         let pos_bb = Self::with_one(pos);
-        let mut targets = (pos_bb >> 8) & !enemy_occupancy;
+        let mut targets = (pos_bb >> 8) & !occupancy;
         if targets != 0 && pos.rank() == Rank::Seven {
-            targets |= (pos_bb >> 16) & !enemy_occupancy;
+            targets |= (pos_bb >> 16) & !occupancy;
         }
 
-        let down_left = (pos_bb >> 9) & enemy_occupancy;
-        let down_right = (pos_bb >> 7) & enemy_occupancy;
+        let down_left = (pos_bb >> 9) & occupancy;
+        let down_right = (pos_bb >> 7) & occupancy;
         targets | down_left | down_right
     }
 
