@@ -133,6 +133,10 @@ impl Position {
             .map(move |&file| Self::construct(file, rank))
     }
 
+    pub fn increasing_iter() -> impl Iterator<Item = Self> {
+        INCREASING.iter().copied()
+    }
+
     pub fn file(&self) -> File {
         self.0
     }
@@ -216,11 +220,16 @@ pub enum File {
 
 impl File {
     pub fn left(&self) -> Option<Self> {
-        Self::try_from(u8::from(*self) - 1).ok()
+        let v = u8::from(*self);
+        if v > 0 {
+            Self::try_from(v - 1).ok()
+        } else {
+            None
+        }
     }
 
     pub fn left_all(&self) -> impl Iterator<Item = Self> {
-        ALL_FILES[..usize::from(u8::from(*self))]
+        ALL_FILES[..=usize::from(u8::from(*self))]
             .iter()
             .copied()
             .rev()
@@ -231,9 +240,7 @@ impl File {
     }
 
     pub fn right_all(&self) -> impl Iterator<Item = Self> {
-        ALL_FILES[usize::from(u8::from(*self)) + 1..]
-            .iter()
-            .copied()
+        ALL_FILES[usize::from(u8::from(*self))..].iter().copied()
     }
 }
 
@@ -323,17 +330,20 @@ impl Rank {
     }
 
     pub fn up_all(&self) -> impl Iterator<Item = Self> {
-        ALL_RANKS[usize::from(u8::from(*self)) + 1..]
-            .iter()
-            .copied()
+        ALL_RANKS[usize::from(u8::from(*self))..].iter().copied()
     }
 
     pub fn down(&self) -> Option<Self> {
-        Self::try_from(u8::from(*self) - 1).ok()
+        let v = u8::from(*self);
+        if v > 0 {
+            Self::try_from(v - 1).ok()
+        } else {
+            None
+        }
     }
 
     pub fn down_all(&self) -> impl Iterator<Item = Self> {
-        ALL_RANKS[..usize::from(u8::from(*self))]
+        ALL_RANKS[..=usize::from(u8::from(*self))]
             .iter()
             .copied()
             .rev()
@@ -428,7 +438,7 @@ mod tests {
     fn file_directions_test() {
         assert_eq!(
             File::E.left_all().collect::<Vec<_>>(),
-            vec![File::D, File::C, File::B, File::A]
+            vec![File::E, File::D, File::C, File::B, File::A]
         );
     }
 
