@@ -381,6 +381,17 @@ impl Bitboard {
             .clear_position(from)
     }
 
+    pub fn first_position(self) -> Option<Position> {
+        let zeros = self.0.trailing_zeros();
+        dbg!(format!("{:064b}", self.0), zeros);
+        dbg!(self);
+        if zeros == 64 {
+            None
+        } else {
+            Some(INCREASING_A1_B1[zeros as usize])
+        }
+    }
+
     pub fn positions(self) -> Vec<Position> {
         let mut positions = Vec::with_capacity(64);
 
@@ -1127,5 +1138,13 @@ mod tests {
                 F7, G7, H7, A8, B8, C8, D8, E8, F8, G8, H8
             ]
         );
+    }
+
+    #[test]
+    fn first_position_test() {
+        assert_eq!(INITIAL_STATE.first_position().unwrap(), A1);
+        assert_eq!(Bitboard::with_one(A1).first_position().unwrap(), A1);
+        assert_eq!(Bitboard::with_one(E4).first_position().unwrap(), E4);
+        assert_eq!(Bitboard::with_one(E1).first_position().unwrap(), E1);
     }
 }

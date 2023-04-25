@@ -1,4 +1,7 @@
-use std::fmt::{Debug, Display};
+use std::{
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 
 use File::*;
 use Rank::*;
@@ -83,11 +86,17 @@ pub const RANK_FIVE: [Position; 8] = [A5, B5, C5, D5, E5, F5, G5, H5];
 pub const RANK_SIX: [Position; 8] = [A6, B6, C6, D6, E6, F6, G6, H6];
 pub const RANK_SEVEN: [Position; 8] = [A7, B7, C7, D7, E7, F7, G7, H7];
 pub const RANK_EIGHT: [Position; 8] = [A8, B8, C8, D8, E8, F8, G8, H8];
-pub const INCREASING: [Position; 64] = [
+pub const INCREASING_A1_A2: [Position; 64] = [
     A1, A2, A3, A4, A5, A6, A7, A8, B1, B2, B3, B4, B5, B6, B7, B8, C1, C2, C3, C4, C5, C6, C7, C8,
     D1, D2, D3, D4, D5, D6, D7, D8, E1, E2, E3, E4, E5, E6, E7, E8, F1, F2, F3, F4, F5, F6, F7, F8,
     G1, G2, G3, G4, G5, G6, G7, G8, H1, H2, H3, H4, H5, H6, H7, H8,
 ];
+pub const INCREASING_A1_B1: [Position; 64] = [
+    A1, B1, C1, D1, E1, F1, G1, H1, A2, B2, C2, D2, E2, F2, G2, H2, A3, B3, C3, D3, E3, F3, G3, H3,
+    A4, B4, C4, D4, E4, F4, G4, H4, A5, B5, C5, D5, E5, F5, G5, H5, A6, B6, C6, D6, E6, F6, G6, H6,
+    A7, B7, C7, D7, E7, F7, G7, H7, A8, B8, C8, D8, E8, F8, G8, H8,
+];
+
 pub(crate) const ALL_FILES: [File; 8] = [
     File::A,
     File::B,
@@ -134,7 +143,7 @@ impl Position {
     }
 
     pub fn increasing_iter() -> impl Iterator<Item = Self> {
-        INCREASING.iter().copied()
+        INCREASING_A1_A2.iter().copied()
     }
 
     pub fn file(&self) -> File {
@@ -143,6 +152,12 @@ impl Position {
 
     pub fn rank(&self) -> Rank {
         self.1
+    }
+
+    pub fn manhattan_distance_to(&self, other: Self) -> usize {
+        let file_dist = u8::from(self.file()).abs_diff(u8::from(other.file()));
+        let rank_dist = u8::from(self.rank()).abs_diff(u8::from(other.rank()));
+        (file_dist + rank_dist) as usize
     }
 
     pub fn up(&self) -> Option<Self> {
@@ -206,6 +221,18 @@ impl Display for Position {
     }
 }
 
+impl FromStr for Position {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars();
+        let file: File = chars.next().ok_or(())?.try_into()?;
+        let rank: Rank = chars.next().ok_or(())?.try_into()?;
+
+        Ok(Self::new(file, rank))
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum File {
     A,
@@ -257,6 +284,24 @@ impl Display for File {
             H => "H",
         };
         write!(f, "{}", s)
+    }
+}
+
+impl TryFrom<char> for File {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        Ok(match value {
+            'a' | 'A' => Self::A,
+            'b' | 'B' => Self::B,
+            'c' | 'C' => Self::C,
+            'd' | 'D' => Self::D,
+            'e' | 'E' => Self::E,
+            'f' | 'F' => Self::F,
+            'g' | 'G' => Self::G,
+            'h' | 'H' => Self::H,
+            _ => return Err(()),
+        })
     }
 }
 
@@ -366,6 +411,24 @@ impl Display for Rank {
     }
 }
 
+impl TryFrom<char> for Rank {
+    type Error = ();
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        Ok(match value {
+            '1' => Self::One,
+            '2' => Self::Two,
+            '3' => Self::Three,
+            '4' => Self::Four,
+            '5' => Self::Five,
+            '6' => Self::Six,
+            '7' => Self::Seven,
+            '8' => Self::Eight,
+            _ => return Err(()),
+        })
+    }
+}
+
 impl From<Rank> for u8 {
     fn from(value: Rank) -> Self {
         match value {
@@ -452,5 +515,20 @@ mod tests {
     fn rank_iter_test() {
         let positions: Vec<Position> = Position::rank_iter(Rank::Seven).collect();
         assert_eq!(positions, vec![A7, B7, C7, D7, E7, F7, G7, H7]);
+    }
+
+    #[test]
+    fn manhattan_distance_to_test() {
+        assert_eq!(E4.manhattan_distance_to(E3), 1);
+        assert_eq!(E4.manhattan_distance_to(A1), 7);
+        assert_eq!(E4.manhattan_distance_to(A8), 8);
+        assert_eq!(E4.manhattan_distance_to(H1), 6);
+        assert_eq!(E4.manhattan_distance_to(H8), 7);
+    }
+
+    #[test]
+    fn parse_position_test() {
+        assert_eq!(E4, "e4".parse().unwrap());
+        assert!("abc".parse::<Position>().is_err());
     }
 }
