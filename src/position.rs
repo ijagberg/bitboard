@@ -269,6 +269,11 @@ impl File {
     pub fn right_all(&self) -> impl Iterator<Item = Self> {
         ALL_FILES[usize::from(u8::from(*self))..].iter().copied()
     }
+
+    pub fn add_offset(&self, offset: i32) -> Option<Self> {
+        let v = (u8::from(*self)) as i32 + offset;
+        Self::try_from(u8::try_from(v).ok()?).ok()
+    }
 }
 
 impl Display for File {

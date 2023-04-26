@@ -305,27 +305,29 @@ impl Bitboard {
         )
     }
 
-    pub fn white_pawn_targets(pos: Position, occupancy: Self) -> Self {
+    pub fn white_pawn_targets(pos: Position, black_occupancy: Self, white_occupancy: Self) -> Self {
+        let full_occupancy = black_occupancy | white_occupancy;
         let pos_bb = Self::with_one(pos);
-        let mut targets = (pos_bb << 8) & !occupancy;
+        let mut targets = (pos_bb << 8) & !full_occupancy;
         if targets != 0 && pos.rank() == Rank::Two {
-            targets |= (pos_bb << 16) & !occupancy;
+            targets |= (pos_bb << 16) & !full_occupancy;
         }
 
-        let up_left = (pos_bb << 7) & occupancy;
-        let up_right = (pos_bb << 9) & occupancy;
+        let up_left = (pos_bb << 7) & black_occupancy;
+        let up_right = (pos_bb << 9) & black_occupancy;
         targets | up_left | up_right
     }
 
-    pub fn black_pawn_targets(pos: Position, occupancy: Self) -> Self {
+    pub fn black_pawn_targets(pos: Position, white_occupancy: Self, black_occupancy: Self) -> Self {
+        let full_occupancy = white_occupancy | black_occupancy;
         let pos_bb = Self::with_one(pos);
-        let mut targets = (pos_bb >> 8) & !occupancy;
+        let mut targets = (pos_bb >> 8) & !full_occupancy;
         if targets != 0 && pos.rank() == Rank::Seven {
-            targets |= (pos_bb >> 16) & !occupancy;
+            targets |= (pos_bb >> 16) & !full_occupancy;
         }
 
-        let down_left = (pos_bb >> 9) & occupancy;
-        let down_right = (pos_bb >> 7) & occupancy;
+        let down_left = (pos_bb >> 9) & white_occupancy;
+        let down_right = (pos_bb >> 7) & white_occupancy;
         targets | down_left | down_right
     }
 
@@ -383,8 +385,6 @@ impl Bitboard {
 
     pub fn first_position(self) -> Option<Position> {
         let zeros = self.0.trailing_zeros();
-        dbg!(format!("{:064b}", self.0), zeros);
-        dbg!(self);
         if zeros == 64 {
             None
         } else {
@@ -1029,12 +1029,20 @@ mod tests {
     #[test]
     fn white_pawn_targets_test() {
         assert_eq!(
-            Bitboard::white_pawn_targets(E2, INITIAL_STATE),
+            Bitboard::white_pawn_targets(
+                E2,
+                Bitboard::full().mask_ranks([Rank::Seven, Rank::Eight]),
+                Bitboard::full().mask_ranks([Rank::One, Rank::Two])
+            ),
             Bitboard::with_ones([E3, E4])
         );
 
         assert_eq!(
-            Bitboard::white_pawn_targets(E6, INITIAL_STATE.mask_ranks([Rank::Seven, Rank::Eight])),
+            Bitboard::white_pawn_targets(
+                E6,
+                Bitboard::full().mask_ranks([Rank::Seven, Rank::Eight]),
+                Bitboard::empty()
+            ),
             Bitboard::with_ones([D7, F7])
         );
     }
@@ -1042,17 +1050,29 @@ mod tests {
     #[test]
     fn black_pawn_targets_test() {
         assert_eq!(
-            Bitboard::black_pawn_targets(A7, INITIAL_STATE),
+            Bitboard::black_pawn_targets(
+                A7,
+                INITIAL_STATE.mask_ranks([Rank::One, Rank::Two]),
+                INITIAL_STATE.mask_ranks([Rank::Seven, Rank::Eight])
+            ),
             Bitboard::with_ones([A6, A5])
         );
 
         assert_eq!(
-            Bitboard::black_pawn_targets(H6, INITIAL_STATE.mask_ranks([Rank::One, Rank::Two])),
+            Bitboard::black_pawn_targets(
+                H6,
+                INITIAL_STATE.mask_ranks([Rank::One, Rank::Two]),
+                Bitboard::empty()
+            ),
             Bitboard::with_ones([H5])
         );
 
         assert_eq!(
-            Bitboard::black_pawn_targets(H3, INITIAL_STATE.mask_ranks([Rank::One, Rank::Two])),
+            Bitboard::black_pawn_targets(
+                H3,
+                INITIAL_STATE.mask_ranks([Rank::One, Rank::Two]),
+                Bitboard::empty()
+            ),
             Bitboard::with_ones([G2])
         );
     }
