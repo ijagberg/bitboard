@@ -279,14 +279,14 @@ impl File {
 impl Display for File {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            A => "A",
-            B => "B",
-            C => "C",
-            D => "D",
-            E => "E",
-            F => "F",
-            G => "G",
-            H => "H",
+            A => "a",
+            B => "b",
+            C => "c",
+            D => "d",
+            E => "e",
+            F => "f",
+            G => "g",
+            H => "h",
         };
         write!(f, "{}", s)
     }
