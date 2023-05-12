@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+pub use position::consts::*;
 pub use position::*;
 use std::{
     fmt::{Debug, Display},
@@ -77,7 +78,7 @@ const RANK_8: u64 = 0b1111111100000000000000000000000000000000000000000000000000
 pub const RANK_8_MASK: Bitboard = Bitboard::construct(RANK_8);
 pub const RANK_8_CLEAR: Bitboard = Bitboard::construct(!RANK_8);
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Bitboard(u64);
 
 impl Bitboard {
@@ -388,7 +389,7 @@ impl Bitboard {
         if zeros == 64 {
             None
         } else {
-            Some(INCREASING_A1_B1[zeros as usize])
+            Some(position::consts::INCREASING_A1_B1[zeros as usize])
         }
     }
 
@@ -777,6 +778,7 @@ pub(crate) fn bitboard_index_of(pos: Position) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use position::consts::*;
 
     #[test]
     fn shl_test() {
