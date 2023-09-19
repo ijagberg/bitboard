@@ -1,4 +1,4 @@
-use consts::*;
+use self::consts::*;
 use std::{
     fmt::{Debug, Display},
     str::FromStr,
