@@ -3,6 +3,7 @@
 pub use crate::consts::*;
 use chesspos::prelude::*;
 use std::{
+    collections::HashSet,
     fmt::{Debug, Display},
     ops::{
         Add, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr, Sub,
@@ -934,6 +935,28 @@ impl Bitboard {
             & !self_occupancy
     }
 
+    /// Returns a `Bitboard` describing valid target squares for a white queen on `pos`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use bitboard::prelude::*;
+    /// let white_pieces = Bitboard::with_one(G4);
+    /// let black_pieces = Bitboard::with_one(D6);
+    /// // A white queen can move to any empty squares on its cardinals and diagonals.
+    /// // There is a black piece on D6, which the white queen can take, but not move through.
+    /// // There is a white piece on G4, which blocks the white queen.
+    /// assert_eq!(Bitboard::white_queen_targets(D4, white_pieces, black_pieces),
+    ///     Bitboard::with_ones([A1, D1, G1, B2, D2, F2, C3, D3, E3, A4, B4, C4, E4, F4, C5, D5, E5, B6, D6, F6, A7, G7, H8]));
+    /// //   ABCDEFGH      ABCDEFGH
+    /// // 8 00000000    8 00000001
+    /// // 7 00000000    7 10000010
+    /// // 6 00010000    6 01010100
+    /// // 5 00000000 -> 5 00111000
+    /// // 4 000x0000    4 11101100
+    /// // 3 00000000    3 00111000
+    /// // 2 00000000    2 01010100
+    /// // 1 00000000    1 10010010
+    /// ```
     pub fn white_queen_targets(
         from: Position,
         white_occupancy: Self,
@@ -942,6 +965,28 @@ impl Bitboard {
         Self::queen_targets(from, white_occupancy, black_occupancy)
     }
 
+    /// Returns a `Bitboard` describing valid target squares for a black queen on `pos`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use bitboard::prelude::*;
+    /// let white_pieces = Bitboard::with_one(D6);
+    /// let black_pieces = Bitboard::with_one(G4);
+    /// // A black queen can move to any empty squares on its cardinals and diagonals.
+    /// // There is a white piece on D6, which the black queen can take, but not move through.
+    /// // There is a black piece on G4, which blocks the black queen.
+    /// assert_eq!(Bitboard::black_queen_targets(D4, white_pieces, black_pieces),
+    ///     Bitboard::with_ones([A1, D1, G1, B2, D2, F2, C3, D3, E3, A4, B4, C4, E4, F4, C5, D5, E5, B6, D6, F6, A7, G7, H8]));
+    /// //   ABCDEFGH      ABCDEFGH
+    /// // 8 00000000    8 00000001
+    /// // 7 00000000    7 10000010
+    /// // 6 00010000    6 01010100
+    /// // 5 00000000 -> 5 00111000
+    /// // 4 000x0000    4 11101100
+    /// // 3 00000000    3 00111000
+    /// // 2 00000000    2 01010100
+    /// // 1 00000000    1 10010010
+    /// ```
     pub fn black_queen_targets(
         from: Position,
         white_occupancy: Self,
@@ -956,6 +1001,18 @@ impl Bitboard {
         .clear_position(from)
     }
 
+    /// Returns the first position in `self` where the bit is 1, or `None` if all bits are 0.
+    ///
+    /// ## Notes
+    /// Searches in the following order: `A1, B1, C1, ..., F8, G8, H8`.
+    ///
+    /// ## Example
+    /// ```rust
+    /// # use bitboard::prelude::*;
+    /// let bb = Bitboard::with_ones([A5, C7, A3]);
+    /// assert_eq!(bb.first_position(), Some(A3));
+    /// assert_eq!(Bitboard::empty().first_position(), None);
+    /// ```
     pub fn first_position(self) -> Option<Position> {
         let zeros = self.0.trailing_zeros();
         if zeros == 64 {
@@ -965,15 +1022,23 @@ impl Bitboard {
         }
     }
 
-    pub fn positions(self) -> Vec<Position> {
-        let mut positions = Vec::with_capacity(64);
+    /// Returns a `HashSet` containing each position in `self` where the bit is 1.
+    /// 
+    /// ## Example
+    /// ```rust
+    /// # use bitboard::prelude::*;
+    /// let bb = Bitboard::with_ones([A1, C3, D3]);
+    /// assert_eq!(bb.positions(), [A1, C3, D3].iter().copied().collect());
+    /// ```
+    pub fn positions(self) -> HashSet<Position> {
+        let mut positions = HashSet::with_capacity(64);
 
         for shift in 0..64 {
             let bit_at = self & (1 << shift);
             if bit_at != 0 {
                 let file = File::try_from(shift % 8).unwrap();
                 let rank = Rank::try_from(shift / 8).unwrap();
-                positions.push(Position::new(file, rank));
+                positions.insert(Position::new(file, rank));
             }
         }
         positions
@@ -1735,10 +1800,13 @@ mod tests {
     fn positions_test() {
         assert_eq!(
             INITIAL_STATE.positions(),
-            vec![
+            [
                 A1, B1, C1, D1, E1, F1, G1, H1, A2, B2, C2, D2, E2, F2, G2, H2, A7, B7, C7, D7, E7,
                 F7, G7, H7, A8, B8, C8, D8, E8, F8, G8, H8
             ]
+            .iter()
+            .copied()
+            .collect()
         );
     }
 
