@@ -31,7 +31,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::Bitboard;
+    /// # use bitboard64::prelude::*;
     /// let full = Bitboard::full();
     /// assert_eq!(full, Bitboard::new(0b1111111111111111111111111111111111111111111111111111111111111111));
     /// ```
@@ -43,7 +43,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::Bitboard;
+    /// # use bitboard64::prelude::*;
     /// let empty = Bitboard::empty();
     /// assert_eq!(empty, Bitboard::new(0b0000000000000000000000000000000000000000000000000000000000000000));
     /// ```
@@ -55,7 +55,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_one(A7);
     /// assert_eq!(bb, Bitboard::new(0b1000000000000000000000000000000000000000000000000));
     /// //   ABCDEFGH
@@ -76,7 +76,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, B2, C3, D4, E5, F6, G7, H8]);
     /// assert_eq!(bb, Bitboard::new(0b1000000001000000001000000001000000001000000001000000001000000001));
     /// //   ABCDEFGH
@@ -102,7 +102,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_one(F2);
     /// assert!(bb.bit_at(F2));
     /// assert!(!bb.bit_at(F3));
@@ -116,7 +116,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([F2, F3]);
     /// let masked = bb.include_position(F3);
     /// assert_eq!(masked, Bitboard::with_one(F3)); // the bit at F2 is now 0
@@ -138,7 +138,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([F2, F3, F4]);
     /// let masked = bb.include_positions([F3, F4, F5]);
     /// assert_eq!(masked, Bitboard::with_ones([F3, F4])); // neither F2 nor F5 are in the resulting bitboard
@@ -165,7 +165,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([F4, F5]);
     /// let cleared = bb.clear_position(F4);
     /// assert_eq!(cleared, Bitboard::with_one(F5)); // F4 has been cleared
@@ -187,7 +187,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([F2, F3, F4]);
     /// let cleared = bb.clear_positions([F2, F3]);
     /// assert_eq!(cleared, Bitboard::with_one(F4)); // only F4 remains after clearing F2 and F3
@@ -227,7 +227,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, B1, C1]);
     /// let masked = bb.include_file(File::A);
     /// assert_eq!(masked, Bitboard::with_one(A1)); // B1 and C1 are not in file A
@@ -249,7 +249,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, B1, C1]);
     /// let masked = bb.include_files([File::A, File::B]);
     /// assert_eq!(masked, Bitboard::with_ones([A1, B1])); // C1 is not in file A or B
@@ -289,7 +289,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([C1, C2, B2]);
     /// let cleared = bb.clear_file(File::C);
     /// assert_eq!(cleared, Bitboard::with_one(B2)); // C1 and C2 have been cleared
@@ -311,7 +311,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([C1, C2, B2, D1]);
     /// let cleared = bb.clear_files([File::C, File::D]);
     /// assert_eq!(cleared, Bitboard::with_one(B2)); // C1, C2 and D1 have been cleared
@@ -351,7 +351,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, A2, G2]);
     /// let rank_two = bb.include_rank(Rank::Two);
     /// assert_eq!(rank_two, Bitboard::with_ones([A2, G2]));
@@ -373,7 +373,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, A2, B2, F3]);
     /// let rank_two_and_three = bb.include_ranks([Rank::Two, Rank::Three]);
     /// assert_eq!(rank_two_and_three, Bitboard::with_ones([A2, B2, F3])); // A1 is not in rank two or three
@@ -413,7 +413,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([C1, C2, B2]);
     /// let without_rank_1 = bb.clear_rank(Rank::One);
     /// assert_eq!(without_rank_1, Bitboard::with_ones([C2, B2])); // C1 has been cleared
@@ -435,7 +435,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([C1, C2, B2, D3]);
     /// let cleared = bb.clear_ranks([Rank::Two, Rank::Three]);
     /// assert_eq!(cleared, Bitboard::with_one(C1)); // C2, B2, D3 have been cleared
@@ -462,7 +462,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::up_ray(C5);
     /// assert_eq!(bb, Bitboard::with_ones([C5, C6, C7, C8]));
     /// //   ABCDEFGH
@@ -485,7 +485,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::up_right_ray(C5);
     /// assert_eq!(bb, Bitboard::with_ones([C5, D6, E7, F8]));
     /// //   ABCDEFGH
@@ -511,7 +511,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::right_ray(C5);
     /// assert_eq!(bb, Bitboard::with_ones([C5, D5, E5, F5, G5, H5]));
     /// //   ABCDEFGH
@@ -534,7 +534,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::down_right_ray(C5);
     /// assert_eq!(bb, Bitboard::with_ones([C5, D4, E3, F2, G1]));
     /// //   ABCDEFGH
@@ -560,7 +560,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::down_ray(C5);
     /// assert_eq!(bb, Bitboard::with_ones([C5, C4, C3, C2, C1]));
     /// //   ABCDEFGH
@@ -583,7 +583,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::down_left_ray(C5);
     /// assert_eq!(bb, Bitboard::with_ones([C5, B4, A3]));
     /// //   ABCDEFGH
@@ -609,7 +609,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::left_ray(C5);
     /// assert_eq!(bb, Bitboard::with_ones([C5, B5, A5]));
     /// //   ABCDEFGH
@@ -632,7 +632,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::up_left_ray(C5);
     /// assert_eq!(bb, Bitboard::with_ones([C5, B6, A7]));
     /// //   ABCDEFGH
@@ -658,7 +658,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white = Bitboard::with_ones([]); // white has no pieces on the board
     /// let black = Bitboard::with_ones([C5]); // black has a piece at C5
     /// // a white pawn at D4 can either move to C5 (taking blacks piece), or move to D5
@@ -681,7 +681,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white = Bitboard::with_ones([C3]); // White has a piece at C3
     /// let black = Bitboard::with_ones([D3]); // Black has a piece at D3
     /// // A black pawn at D4 can move to C3 (taking whites piece). Note that it can't move to D3, since black already has a piece there.
@@ -704,7 +704,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white_pieces = Bitboard::with_ones([B4]);
     /// // A white king can move to any square one Manhattan distance step away.
     /// // There is a white piece on B4, which blocks the white king.
@@ -727,7 +727,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let black_pieces = Bitboard::with_ones([B4]);
     /// // A black king can move to any square one Manhattan distance step away.
     /// // There is a black piece on B4, which blocks the black king.
@@ -767,7 +767,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white_pieces = Bitboard::with_ones([A6, C6]);
     /// // a white knight on B4 can't move to A6 or C6 if there are white pieces there
     /// assert_eq!(Bitboard::knight_targets(B4, white_pieces), Bitboard::with_ones([D5, D3, C2, A2]));
@@ -807,7 +807,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white_pieces = Bitboard::with_one(E1);
     /// let black_pieces = Bitboard::with_one(D6);
     /// // a white bishop on B4 can move to any empty square on its diagonals,
@@ -836,7 +836,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white_pieces = Bitboard::with_one(D6);
     /// let black_pieces = Bitboard::with_one(E1);
     /// // A black bishop on B4 can move to any empty square on its diagonals.
@@ -873,7 +873,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white_pieces = Bitboard::with_one(G4);
     /// let black_pieces = Bitboard::with_one(D6);
     /// // A white rook can move to any empty squares on its cardinals.
@@ -902,7 +902,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white_pieces = Bitboard::with_one(D6);
     /// let black_pieces = Bitboard::with_one(G4);
     /// // A black rook can move to any empty squares on its cardinals.
@@ -939,7 +939,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white_pieces = Bitboard::with_one(G4);
     /// let black_pieces = Bitboard::with_one(D6);
     /// // A white queen can move to any empty squares on its cardinals and diagonals.
@@ -969,7 +969,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let white_pieces = Bitboard::with_one(D6);
     /// let black_pieces = Bitboard::with_one(G4);
     /// // A black queen can move to any empty squares on its cardinals and diagonals.
@@ -1008,7 +1008,7 @@ impl Bitboard {
     ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A5, C7, A3]);
     /// assert_eq!(bb.first_position(), Some(A3));
     /// assert_eq!(Bitboard::empty().first_position(), None);
@@ -1023,10 +1023,10 @@ impl Bitboard {
     }
 
     /// Returns a `HashSet` containing each position in `self` where the bit is 1.
-    /// 
+    ///
     /// ## Example
     /// ```rust
-    /// # use bitboard::prelude::*;
+    /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, C3, D3]);
     /// assert_eq!(bb.positions(), [A1, C3, D3].iter().copied().collect());
     /// ```
