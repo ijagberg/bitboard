@@ -11,4 +11,4 @@ repository = "https://github.com/ijagberg/bitboard"
 homepage = "https://github.com/ijagberg/bitboard"
 
 [dependencies]
-chesspos = "0.1.0"
+chesspos = { git = "https://github.com/ijagberg/chesspos", branch = "main" }
