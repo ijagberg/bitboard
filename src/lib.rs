@@ -1380,7 +1380,7 @@ impl Display for Bitboard {
             output.push(line);
         }
 
-        write!(f, "bitboard:\n{}", output.join("\n"))
+        write!(f, "{}", output.join("\n"))
     }
 }
 
