@@ -1412,6 +1412,12 @@ impl From<Bitboard> for u64 {
     }
 }
 
+impl Default for Bitboard {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+
 enum LineAttack {
     /// A vertical line
     /// ```ignore
