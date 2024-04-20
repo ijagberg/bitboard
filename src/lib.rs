@@ -1400,6 +1400,18 @@ impl Shr<u32> for Bitboard {
     }
 }
 
+impl From<u64> for Bitboard {
+    fn from(value: u64) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<Bitboard> for u64 {
+    fn from(value: Bitboard) -> Self {
+        value.data()
+    }
+}
+
 enum LineAttack {
     /// A vertical line
     /// ```ignore
