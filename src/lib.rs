@@ -1421,28 +1421,28 @@ impl Default for Bitboard {
 enum LineAttack {
     /// A vertical line
     /// ```ignore
-    /// // |
-    /// // |
-    /// // |
+    /// |
+    /// |
+    /// |
     /// ```
     Rank,
     /// A horizontal line
     /// ```ignore
-    /// // ---
+    /// ---
     /// ```
     File,
     /// A diagonal line going up-right
     /// ```ignore
-    /// //   /
-    /// //  /
-    /// // /
+    ///   /
+    ///  /
+    /// /
     /// ```
     Slash,
     /// A diagonal line going down-right
     /// ```ignore
-    /// // \
-    /// //  \
-    /// //   \
+    ///  \
+    ///   \
+    ///    \
     /// ```
     Backslash,
 }
@@ -1616,6 +1616,9 @@ mod tests {
 
         let targets_of_a1 = Bitboard::knight_targets(A1, Bitboard::empty());
         assert_eq!(targets_of_a1, Bitboard::full().include_positions([B3, C2]));
+
+        let targets_of_c8 = Bitboard::knight_targets(C8, Bitboard::empty());
+        assert_eq!(targets_of_c8, Bitboard::full().include_positions([A7, B6, D6, E7]));
     }
 
     #[test]
