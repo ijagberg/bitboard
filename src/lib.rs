@@ -1380,7 +1380,7 @@ impl Display for Bitboard {
             output.push(line);
         }
 
-        write!(f, "bitboard:\n{}", output.join("\n"))
+        write!(f, "{}", output.join("\n"))
     }
 }
 
@@ -1397,6 +1397,24 @@ impl Shr<u32> for Bitboard {
 
     fn shr(self, rhs: u32) -> Self {
         Self(self.data().checked_shr(rhs).unwrap_or(0))
+    }
+}
+
+impl From<u64> for Bitboard {
+    fn from(value: u64) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<Bitboard> for u64 {
+    fn from(value: Bitboard) -> Self {
+        value.data()
+    }
+}
+
+impl Default for Bitboard {
+    fn default() -> Self {
+        Self(Default::default())
     }
 }
 
