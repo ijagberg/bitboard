@@ -1414,7 +1414,7 @@ impl From<Bitboard> for u64 {
 
 impl Default for Bitboard {
     fn default() -> Self {
-        Self(Default::default())
+        Self::empty()
     }
 }
 
