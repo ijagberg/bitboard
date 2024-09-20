@@ -2,6 +2,8 @@
 
 pub use crate::consts::*;
 use chesspos::prelude::*;
+use chesspos::File::*;
+use chesspos::Rank::*;
 use std::{
     collections::HashSet,
     fmt::{Debug, Display},
@@ -69,7 +71,7 @@ impl Bitboard {
     /// // 1 00000000
     /// ```
     pub fn with_one(pos: Position) -> Self {
-        Self::construct(1 << bitboard_index_of(pos))
+        Self::construct(1 << position_to_bitboard_index(pos))
     }
 
     /// Create a `Bitboard` with all positions in `positions` set to 1.
@@ -108,7 +110,7 @@ impl Bitboard {
     /// assert!(!bb.bit_at(F3));
     /// ```
     pub fn bit_at(&self, pos: Position) -> bool {
-        let idx = bitboard_index_of(pos);
+        let idx = position_to_bitboard_index(pos);
         ((1 << idx) & self.0) > 0
     }
 
@@ -1036,9 +1038,12 @@ impl Bitboard {
         for shift in 0..64 {
             let bit_at = self & (1 << shift);
             if bit_at != 0 {
-                let file = File::try_from(shift % 8).unwrap();
-                let rank = Rank::try_from(shift / 8).unwrap();
-                positions.insert(Position::new(file, rank));
+                positions.insert(
+                    bitboard_index_to_position(shift).expect("shift should be less than 64"),
+                );
+                // let file = File::try_from(shift % 8).unwrap();
+                // let rank = Rank::try_from(shift / 8).unwrap();
+                // positions.insert(Position::new(file, rank));
             }
         }
         positions
@@ -1447,9 +1452,60 @@ enum LineAttack {
     Backslash,
 }
 
-pub(crate) fn bitboard_index_of(pos: Position) -> usize {
+pub(crate) fn position_to_bitboard_index(pos: Position) -> usize {
     // A1 is index 0, H8 is index 63
-    usize::from(8 * u8::from(pos.rank()) + u8::from(pos.file()))
+    let file_u8: u8 = match pos.file() {
+        A => 0,
+        B => 1,
+        C => 2,
+        D => 3,
+        E => 4,
+        F => 5,
+        G => 6,
+        H => 7,
+    };
+    let rank_u8: u8 = match pos.rank() {
+        One => 0,
+        Two => 1,
+        Three => 2,
+        Four => 3,
+        Five => 4,
+        Six => 5,
+        Seven => 6,
+        Eight => 7,
+    };
+
+    usize::from((8 * rank_u8) + (file_u8))
+}
+
+pub(crate) fn bitboard_index_to_position(idx: usize) -> Option<Position> {
+    if idx >= 64 {
+        return None;
+    }
+    // 0 is A1, 1 is A2, ..., 63 is H8
+    let file = match idx % 8 {
+        0 => A,
+        1 => B,
+        2 => C,
+        3 => D,
+        4 => E,
+        5 => F,
+        6 => G,
+        7 => H,
+        _ => unreachable!("idx % 8 cannot be outside [0..=7]"),
+    };
+    let rank = match idx / 8 {
+        0 => One,
+        1 => Two,
+        2 => Three,
+        3 => Four,
+        4 => Five,
+        5 => Six,
+        6 => Seven,
+        7 => Eight,
+        _ => unreachable!("idx / 8 cannot be larger than 7 if idx < 64"),
+    };
+    Some(Position::new(file, rank))
 }
 
 #[cfg(test)]
@@ -1618,7 +1674,10 @@ mod tests {
         assert_eq!(targets_of_a1, Bitboard::full().include_positions([B3, C2]));
 
         let targets_of_c8 = Bitboard::knight_targets(C8, Bitboard::empty());
-        assert_eq!(targets_of_c8, Bitboard::full().include_positions([A7, B6, D6, E7]));
+        assert_eq!(
+            targets_of_c8,
+            Bitboard::full().include_positions([A7, B6, D6, E7])
+        );
     }
 
     #[test]
