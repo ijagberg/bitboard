@@ -721,8 +721,8 @@ impl Bitboard {
     /// // 2 00000000    2 00000000
     /// // 1 00000000    1 00000000
     /// ```
-    pub fn white_king_targets(from: Position, white_occupancy: Self) -> Self {
-        Self::king_targets(from, white_occupancy)
+    pub fn white_king_targets(pos: Position, white_occupancy: Self) -> Self {
+        Self::king_targets(pos, white_occupancy)
     }
 
     /// Returns a `Bitboard` describing valid target squares for a black king on `pos`.
@@ -744,12 +744,12 @@ impl Bitboard {
     /// // 2 00000000    2 00000000
     /// // 1 00000000    1 00000000
     /// ```
-    pub fn black_king_targets(from: Position, black_occupancy: Self) -> Self {
-        Self::king_targets(from, black_occupancy)
+    pub fn black_king_targets(pos: Position, black_occupancy: Self) -> Self {
+        Self::king_targets(pos, black_occupancy)
     }
 
-    fn king_targets(from: Position, self_occupancy: Self) -> Self {
-        let king_bb = Bitboard::with_one(from);
+    fn king_targets(pos: Position, self_occupancy: Self) -> Self {
+        let king_bb = Bitboard::with_one(pos);
         let up = king_bb << 8;
         let up_right = (king_bb << 9).clear_file(File::A);
         let right = (king_bb << 1).clear_file(File::A);
@@ -827,11 +827,11 @@ impl Bitboard {
     /// // 1 00000000    1 00000000
     /// ```
     pub fn white_bishop_targets(
-        from: Position,
+        pos: Position,
         white_occupancy: Self,
         black_occupancy: Self,
     ) -> Self {
-        Self::bishop_targets(from, white_occupancy, black_occupancy)
+        Self::bishop_targets(pos, white_occupancy, black_occupancy)
     }
 
     /// Returns a `Bitboard` describing valid target squares for a black bishop on `pos`.
@@ -840,11 +840,11 @@ impl Bitboard {
     /// ```rust
     /// # use bitboard64::prelude::*;
     /// let white_pieces = Bitboard::with_one(D6);
-    /// let black_pieces = Bitboard::with_one(E1);
+    /// let black_pieces = Bitboard::with_one(D2);
     /// // A black bishop on B4 can move to any empty square on its diagonals.
-    /// // There is a black piece on E1, which blocks the black bishop.
+    /// // There is a black piece on D2, which blocks the black bishop.
     /// // There is a white piece on D6, which the black bishop can take, but not move through.
-    /// assert_eq!(Bitboard::black_bishop_targets(B4, white_pieces, black_pieces), Bitboard::with_ones([A3, A5, C5, D6, C3, D2]));
+    /// assert_eq!(Bitboard::black_bishop_targets(B4, white_pieces, black_pieces), Bitboard::with_ones([A3, A5, C5, D6, C3]));
     /// //   ABCDEFGH      ABCDEFGH
     /// // 8 00000000    8 00000000
     /// // 7 00000000    7 00000000
@@ -852,15 +852,15 @@ impl Bitboard {
     /// // 5 00000000 -> 5 10100000
     /// // 4 0x000000    4 0x000000
     /// // 3 00000000    3 10100000
-    /// // 2 00000000    2 00010000
+    /// // 2 00000000    2 00000000
     /// // 1 00000000    1 00000000
     /// ```
     pub fn black_bishop_targets(
-        from: Position,
+        pos: Position,
         white_occupancy: Self,
         black_occupancy: Self,
     ) -> Self {
-        Self::bishop_targets(from, black_occupancy, white_occupancy)
+        Self::bishop_targets(pos, black_occupancy, white_occupancy)
     }
 
     fn bishop_targets(from: Position, self_occupancy: Self, other_occupancy: Self) -> Self {
@@ -892,12 +892,8 @@ impl Bitboard {
     /// // 2 00000000    2 00010000
     /// // 1 00000000    1 00010000
     /// ```
-    pub fn white_rook_targets(
-        from: Position,
-        white_occupancy: Self,
-        black_occupancy: Self,
-    ) -> Self {
-        Self::rook_targets(from, white_occupancy, black_occupancy)
+    pub fn white_rook_targets(pos: Position, white_occupancy: Self, black_occupancy: Self) -> Self {
+        Self::rook_targets(pos, white_occupancy, black_occupancy)
     }
 
     /// Returns a `Bitboard` describing valid target squares for a black rook on `pos`.
@@ -921,12 +917,8 @@ impl Bitboard {
     /// // 2 00000000    2 00010000
     /// // 1 00000000    1 00010000
     /// ```
-    pub fn black_rook_targets(
-        from: Position,
-        white_occupancy: Self,
-        black_occupancy: Self,
-    ) -> Self {
-        Self::rook_targets(from, black_occupancy, white_occupancy)
+    pub fn black_rook_targets(pos: Position, white_occupancy: Self, black_occupancy: Self) -> Self {
+        Self::rook_targets(pos, black_occupancy, white_occupancy)
     }
 
     fn rook_targets(from: Position, self_occupancy: Self, other_occupancy: Self) -> Self {
@@ -960,11 +952,11 @@ impl Bitboard {
     /// // 1 00000000    1 10010010
     /// ```
     pub fn white_queen_targets(
-        from: Position,
+        pos: Position,
         white_occupancy: Self,
         black_occupancy: Self,
     ) -> Self {
-        Self::queen_targets(from, white_occupancy, black_occupancy)
+        Self::queen_targets(pos, white_occupancy, black_occupancy)
     }
 
     /// Returns a `Bitboard` describing valid target squares for a black queen on `pos`.
@@ -990,11 +982,11 @@ impl Bitboard {
     /// // 1 00000000    1 10010010
     /// ```
     pub fn black_queen_targets(
-        from: Position,
+        pos: Position,
         white_occupancy: Self,
         black_occupancy: Self,
     ) -> Self {
-        Self::queen_targets(from, black_occupancy, white_occupancy)
+        Self::queen_targets(pos, black_occupancy, white_occupancy)
     }
 
     fn queen_targets(from: Position, self_occupancy: Self, other_occupancy: Self) -> Self {
@@ -1041,9 +1033,6 @@ impl Bitboard {
                 positions.insert(
                     bitboard_index_to_position(shift).expect("shift should be less than 64"),
                 );
-                // let file = File::try_from(shift % 8).unwrap();
-                // let rank = Rank::try_from(shift / 8).unwrap();
-                // positions.insert(Position::new(file, rank));
             }
         }
         positions
@@ -1452,8 +1441,18 @@ enum LineAttack {
     Backslash,
 }
 
+/// Use this function to convert a `Position` into a value in 0..=63.
+///
+/// ## Example
+/// ```rust,ignore
+/// # use bitboard64::prelude::*;
+/// assert_eq!(position_to_bitboard_index(A1), 0);
+/// assert_eq!(position_to_bitboard_index(H8), 63);
+/// assert_eq!(position_to_bitboard_index(A2), 1);
+/// assert_eq!(position_to_bitboard_index(C4), 26);
+/// ```
 pub(crate) fn position_to_bitboard_index(pos: Position) -> usize {
-    // A1 is index 0, H8 is index 63
+    // A1 is index 0, A2 is 1, H8 is index 63
     let file_u8: u8 = match pos.file() {
         A => 0,
         B => 1,
@@ -1478,6 +1477,16 @@ pub(crate) fn position_to_bitboard_index(pos: Position) -> usize {
     usize::from((8 * rank_u8) + (file_u8))
 }
 
+/// Use this function to convert a value in 0..=63 to a `Position`.
+///
+/// ## Example
+/// ```rust,ignore
+/// # use bitboard64::prelude::*;
+/// assert_eq!(bitboard_index_to_position(0), Some(A1));
+/// assert_eq!(bitboard_index_to_position(63), Some(H8));
+/// assert_eq!(bitboard_index_to_position(25), Some(A1));
+/// assert_eq!(bitboard_index_to_position(64), None);
+/// ```
 pub(crate) fn bitboard_index_to_position(idx: usize) -> Option<Position> {
     if idx >= 64 {
         return None;
@@ -1896,5 +1905,44 @@ mod tests {
         assert_eq!(Bitboard::with_one(A1).first_position().unwrap(), A1);
         assert_eq!(Bitboard::with_one(E4).first_position().unwrap(), E4);
         assert_eq!(Bitboard::with_one(E1).first_position().unwrap(), E1);
+    }
+
+    #[test]
+    fn bitboard_index_to_position_test() {
+        assert_eq!(bitboard_index_to_position(0), Some(A1));
+        assert_eq!(bitboard_index_to_position(63), Some(H8));
+        assert_eq!(bitboard_index_to_position(25), Some(B4));
+        assert_eq!(bitboard_index_to_position(64), None);
+    }
+
+    #[test]
+    fn position_to_bitboard_index_test() {
+        assert_eq!(position_to_bitboard_index(A1), 0);
+        assert_eq!(position_to_bitboard_index(H8), 63);
+        assert_eq!(position_to_bitboard_index(A2), 8);
+        assert_eq!(position_to_bitboard_index(C4), 26);
+
+        // no position gives an invalid index
+        for pos in INCREASING_A1_A2 {
+            let idx = position_to_bitboard_index(pos);
+            assert!((0..=63).contains(&idx));
+        }
+    }
+
+    #[test]
+    fn readme_test() {
+        use crate::prelude::*;
+
+        let bb = INITIAL_STATE;
+        println!("{bb}");
+
+        let bb_with_two_ones = Bitboard::with_ones([A2, C7]);
+        println!("{bb_with_two_ones}");
+
+        let initial_state_but_only_file_c = INITIAL_STATE.include_file(File::C);
+        println!("{initial_state_but_only_file_c}");
+
+        let up_right_from_b5 = Bitboard::up_right_ray(B5);
+        println!("{up_right_from_b5}");
     }
 }
