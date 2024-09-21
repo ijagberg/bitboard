@@ -23,6 +23,8 @@ println!("{bb}");
 // 1 11111111
 ```
 
+---
+
 You can construct `Bitboards` with specified squares set to 1:
 
 ```rust
@@ -40,6 +42,8 @@ println!("{bb_with_two_ones}");
 // 1 00000000
 ```
 
+---
+
 You can apply masks to include/clear ranks and files from the `Bitboard`:
 
 ```rust
@@ -56,6 +60,27 @@ println!("{initial_state_but_only_file_c}");
 // 2 00100000
 // 1 00100000
 ```
+
+---
+
+You can use bitwise operators:
+
+```rust
+let initial_pawns = INITIAL_STATE & (RANK_2_MASK | RANK_7_MASK);
+println!("{initial_pawns}");
+// prints:
+//   ABCDEFGH
+// 8 00000000
+// 7 11111111
+// 6 00000000
+// 5 00000000
+// 4 00000000
+// 3 00000000
+// 2 11111111
+// 1 00000000
+```
+
+---
 
 You can generate rays:
 
@@ -94,4 +119,4 @@ assert_eq!(Bitboard::black_bishop_targets(B4, white_pieces, black_pieces), Bitbo
 // 1 00000000    1 00000000
 ```
 
-There are many more methods implemented on `Bitboards` that are sure to help with your chess program!
+And a lot more!

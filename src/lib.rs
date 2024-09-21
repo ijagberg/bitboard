@@ -1944,5 +1944,8 @@ mod tests {
 
         let up_right_from_b5 = Bitboard::up_right_ray(B5);
         println!("{up_right_from_b5}");
+
+        let all_pawns = INITIAL_STATE & (RANK_2_MASK | RANK_7_MASK);
+        println!("{all_pawns}");
     }
 }
