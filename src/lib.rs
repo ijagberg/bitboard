@@ -114,6 +114,16 @@ impl Bitboard {
         ((1 << idx) & self.0) > 0
     }
 
+    pub fn mask(&self, mask: impl Into<Mask>) -> Self {
+        let mask: Mask = mask.into();
+        Self(self.0 & mask.0)
+    }
+
+    pub fn clear(&self, mask: impl Into<Mask>) -> Self {
+        let mask: Mask = mask.into();
+        Self(self.0 & !mask.0)
+    }
+
     /// Apply a mask to `self`, only including the bit at `pos`.
     ///
     /// ## Example
@@ -1515,6 +1525,30 @@ pub(crate) fn bitboard_index_to_position(idx: usize) -> Option<Position> {
         _ => unreachable!("idx / 8 cannot be larger than 7 if idx < 64"),
     };
     Some(Position::new(file, rank))
+}
+
+pub struct Mask(u64);
+
+impl From<u64> for Mask {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Position> for Mask {
+    fn from(value: Position) -> Self {
+        Self(1 << position_to_bitboard_index(value))
+    }
+}
+
+impl From<&[Position]> for Mask {
+    fn from(value: &[Position]) -> Self {
+        let mut v = 0;
+        for &pos in value {
+            v |= (1 << position_to_bitboard_index(pos));
+        }
+        Self(v)
+    }
 }
 
 #[cfg(test)]
