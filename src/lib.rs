@@ -29,7 +29,7 @@ impl Bitboard {
         Self::construct(v)
     }
 
-    /// Create a full `Bitboard`.
+    /// Create a `Bitboard` with all bits set to 1.
     ///
     /// ## Example
     /// ```rust
@@ -41,7 +41,7 @@ impl Bitboard {
         Self::construct(!0)
     }
 
-    /// Create an empty `Bitboard`.
+    /// Create a `Bitboard` with all bits set to 0.
     ///
     /// ## Example
     /// ```rust
@@ -92,12 +92,7 @@ impl Bitboard {
     /// // 1 10000000
     /// ```
     pub fn with_ones(positions: impl IntoIterator<Item = Position>) -> Self {
-        let mut s = Self(0);
-        for pos in positions {
-            s |= Self::with_one(pos);
-        }
-
-        s
+        positions.into_iter().fold(Self::empty(), |acc, v| acc | v)
     }
 
     /// Returns `true` if the bit at `pos` is 1, `false` otherwise.
@@ -111,7 +106,7 @@ impl Bitboard {
     /// ```
     pub fn bit_at(&self, pos: Position) -> bool {
         let idx = position_to_bitboard_index(pos);
-        ((1 << idx) & self.0) > 0
+        self.mask(1 << idx) > 0
     }
 
     pub fn mask(&self, mask: impl Into<Mask>) -> Self {
@@ -143,7 +138,7 @@ impl Bitboard {
     /// // 1 00000000    1 00000000
     /// ```
     pub fn include_position(self, pos: Position) -> Self {
-        self & Self::with_one(pos)
+        self.mask(pos)
     }
 
     /// Apply a mask to `self`, only including the bits at the given positions.
@@ -152,7 +147,7 @@ impl Bitboard {
     /// ```rust
     /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([F2, F3, F4]);
-    /// let masked = bb.include_positions([F3, F4, F5]);
+    /// let masked = bb.mask_positions([F3, F4, F5]);
     /// assert_eq!(masked, Bitboard::with_ones([F3, F4])); // neither F2 nor F5 are in the resulting bitboard
     /// //   ABCDEFGH      ABCDEFGH
     /// // 8 00000000    8 00000000
@@ -164,13 +159,9 @@ impl Bitboard {
     /// // 2 00000100    2 00000000
     /// // 1 00000000    1 00000000
     /// ```
-    pub fn include_positions(self, positions: impl IntoIterator<Item = Position>) -> Self {
-        let mut include = Self::empty();
-        for pos in positions {
-            include |= Self::with_one(pos);
-        }
-
-        self & include
+    pub fn mask_positions(self, positions: impl IntoIterator<Item = Position>) -> Self {
+        let mask = positions.into_iter().fold(Self::empty(), |acc, v| acc | v);
+        self.mask(mask)
     }
 
     /// Apply a mask to `self`, clearing the bit at position `pos`.
@@ -192,7 +183,7 @@ impl Bitboard {
     /// // 1 00000000    1 00000000
     /// ```
     pub fn clear_position(self, pos: Position) -> Self {
-        self & !Self::with_one(pos)
+        self.clear(pos)
     }
 
     /// Apply a mask to `self`, clearing the bit at each position in `positions`.
@@ -214,25 +205,9 @@ impl Bitboard {
     /// // 1 00000000    1 00000000
     /// ```
     pub fn clear_positions(self, positions: impl IntoIterator<Item = Position>) -> Self {
-        let mut clear = Self::full();
-        for pos in positions {
-            clear &= !Self::with_one(pos);
-        }
+        let mask = positions.into_iter().fold(Self::empty(), |acc, v| acc | v);
 
-        self & clear
-    }
-
-    fn include_file_bitboard(file: File) -> Self {
-        match file {
-            File::A => FILE_A_MASK,
-            File::B => FILE_B_MASK,
-            File::C => FILE_C_MASK,
-            File::D => FILE_D_MASK,
-            File::E => FILE_E_MASK,
-            File::F => FILE_F_MASK,
-            File::G => FILE_G_MASK,
-            File::H => FILE_H_MASK,
-        }
+        self.clear(mask)
     }
 
     /// Apply a mask to `self`, only including the bits at positions in the given file.
@@ -241,7 +216,7 @@ impl Bitboard {
     /// ```rust
     /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, B1, C1]);
-    /// let masked = bb.include_file(File::A);
+    /// let masked = bb.mask_file(File::A);
     /// assert_eq!(masked, Bitboard::with_one(A1)); // B1 and C1 are not in file A
     /// //   ABCDEFGH      ABCDEFGH
     /// // 8 00000000    8 00000000
@@ -253,8 +228,8 @@ impl Bitboard {
     /// // 2 00000000    2 00000000
     /// // 1 11100000    1 10000000
     /// ```
-    pub fn include_file(self, file: File) -> Self {
-        self & Self::include_file_bitboard(file)
+    pub fn mask_file(self, file: File) -> Self {
+        self.mask(file)
     }
 
     /// Apply a mask to `self`, only including the bits at positions in the given files.
@@ -263,7 +238,7 @@ impl Bitboard {
     /// ```rust
     /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, B1, C1]);
-    /// let masked = bb.include_files([File::A, File::B]);
+    /// let masked = bb.mask_files([File::A, File::B]);
     /// assert_eq!(masked, Bitboard::with_ones([A1, B1])); // C1 is not in file A or B
     /// //   ABCDEFGH      ABCDEFGH
     /// // 8 00000000    8 00000000
@@ -275,26 +250,9 @@ impl Bitboard {
     /// // 2 00000000    2 00000000
     /// // 1 11100000    1 11000000
     /// ```
-    pub fn include_files(self, files: impl IntoIterator<Item = File>) -> Self {
-        let mut mask = Bitboard::empty();
-        for file in files {
-            mask |= Self::include_file_bitboard(file)
-        }
-
-        self & mask
-    }
-
-    fn clear_file_bitboard(file: File) -> Self {
-        match file {
-            File::A => FILE_A_CLEAR,
-            File::B => FILE_B_CLEAR,
-            File::C => FILE_C_CLEAR,
-            File::D => FILE_D_CLEAR,
-            File::E => FILE_E_CLEAR,
-            File::F => FILE_F_CLEAR,
-            File::G => FILE_G_CLEAR,
-            File::H => FILE_H_CLEAR,
-        }
+    pub fn mask_files(self, files: impl IntoIterator<Item = File>) -> Self {
+        let files_mask = files.into_iter().fold(Self::empty(), |acc, v| acc | v);
+        self & files_mask
     }
 
     /// Apply a mask to `self`, setting the bits at positions in the given file to 0.
@@ -316,7 +274,7 @@ impl Bitboard {
     /// // 1 00100000    1 00000000
     /// ```
     pub fn clear_file(self, file: File) -> Self {
-        self & Self::clear_file_bitboard(file)
+        self.clear(file)
     }
 
     /// Apply a mask to `self`, setting the bits at positions in the given files to 0.
@@ -338,25 +296,8 @@ impl Bitboard {
     /// // 1 00110000    1 00000000
     /// ```
     pub fn clear_files(self, files: impl IntoIterator<Item = File>) -> Self {
-        let mut clear = Bitboard::full();
-        for file in files {
-            clear &= Self::clear_file_bitboard(file)
-        }
-
-        self & clear
-    }
-
-    fn include_rank_bitboard(rank: Rank) -> Self {
-        match rank {
-            Rank::One => RANK_1_MASK,
-            Rank::Two => RANK_2_MASK,
-            Rank::Three => RANK_3_MASK,
-            Rank::Four => RANK_4_MASK,
-            Rank::Five => RANK_5_MASK,
-            Rank::Six => RANK_6_MASK,
-            Rank::Seven => RANK_7_MASK,
-            Rank::Eight => RANK_8_MASK,
-        }
+        let mask = files.into_iter().fold(Self::empty(), |acc, v| acc | v);
+        self.clear(mask)
     }
 
     /// Apply a mask to `self`, only including bits at positions in the given rank.
@@ -365,7 +306,7 @@ impl Bitboard {
     /// ```rust
     /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, A2, G2]);
-    /// let rank_two = bb.include_rank(Rank::Two);
+    /// let rank_two = bb.mask_rank(Rank::Two);
     /// assert_eq!(rank_two, Bitboard::with_ones([A2, G2]));
     /// //   ABCDEFGH      ABCDEFGH
     /// // 8 00000000    8 00000000
@@ -377,8 +318,8 @@ impl Bitboard {
     /// // 2 10000010    2 10000010
     /// // 1 10000000    1 00000000
     /// ```
-    pub fn include_rank(self, rank: Rank) -> Self {
-        self & Self::include_rank_bitboard(rank)
+    pub fn mask_rank(self, rank: Rank) -> Self {
+        self.mask(rank)
     }
 
     /// Apply a mask to `self`, only including bits at positions in the given ranks.
@@ -387,7 +328,7 @@ impl Bitboard {
     /// ```rust
     /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([A1, A2, B2, F3]);
-    /// let rank_two_and_three = bb.include_ranks([Rank::Two, Rank::Three]);
+    /// let rank_two_and_three = bb.mask_ranks([Rank::Two, Rank::Three]);
     /// assert_eq!(rank_two_and_three, Bitboard::with_ones([A2, B2, F3])); // A1 is not in rank two or three
     /// //   ABCDEFGH      ABCDEFGH
     /// // 8 00000000    8 00000000
@@ -399,26 +340,10 @@ impl Bitboard {
     /// // 2 11000000    2 11000000
     /// // 1 10000000    1 00000000
     /// ```
-    pub fn include_ranks(self, ranks: impl IntoIterator<Item = Rank>) -> Self {
-        let mut mask = Bitboard::empty();
-        for rank in ranks {
-            mask |= Self::include_rank_bitboard(rank)
-        }
+    pub fn mask_ranks(self, ranks: impl IntoIterator<Item = Rank>) -> Self {
+        let ranks = ranks.into_iter().fold(Self::empty(), |acc, v| acc | v);
 
-        self & mask
-    }
-
-    fn clear_rank_bitboard(rank: Rank) -> Self {
-        match rank {
-            Rank::One => RANK_1_CLEAR,
-            Rank::Two => RANK_2_CLEAR,
-            Rank::Three => RANK_3_CLEAR,
-            Rank::Four => RANK_4_CLEAR,
-            Rank::Five => RANK_5_CLEAR,
-            Rank::Six => RANK_6_CLEAR,
-            Rank::Seven => RANK_7_CLEAR,
-            Rank::Eight => RANK_8_CLEAR,
-        }
+        self.mask(ranks)
     }
 
     /// Apply a mask to `self`, setting the bits at positions in the given rank to 0.
@@ -440,7 +365,7 @@ impl Bitboard {
     /// // 1 00100000    1 00000000
     /// ```
     pub fn clear_rank(self, rank: Rank) -> Self {
-        self & Self::clear_rank_bitboard(rank)
+        self.clear(rank)
     }
 
     /// Apply a mask to `self`, setting the bits at positions in the given ranks to 0.
@@ -462,12 +387,9 @@ impl Bitboard {
     /// // 1 00100000    1 00100000
     /// ```
     pub fn clear_ranks(self, ranks: impl IntoIterator<Item = Rank>) -> Self {
-        let mut clear = Bitboard::full();
-        for rank in ranks {
-            clear &= Self::clear_rank_bitboard(rank);
-        }
+        let mask = ranks.into_iter().fold(Self::empty(), |acc, v| acc | v);
 
-        self & clear
+        self.clear(mask)
     }
 
     /// Create a `Bitboard`, setting each bit at positions in a ray starting at `from` and going straight up to 1.
@@ -489,8 +411,8 @@ impl Bitboard {
     /// ```
     pub fn up_ray(from: Position) -> Self {
         Self::full()
-            .include_ranks(from.rank().walk_up())
-            .include_file(from.file())
+            .mask_ranks(from.rank().walk_up())
+            .mask_file(from.file())
     }
 
     /// Create a `Bitboard`, setting each bit at positions in a ray starting at `from` and going diagonally up and to the right to 1.
@@ -511,7 +433,7 @@ impl Bitboard {
     /// // 1 00000000
     /// ```
     pub fn up_right_ray(from: Position) -> Self {
-        Self::full().include_positions(
+        Self::full().mask_positions(
             from.file()
                 .walk_right()
                 .zip(from.rank().walk_up())
@@ -538,8 +460,8 @@ impl Bitboard {
     /// ```
     pub fn right_ray(from: Position) -> Self {
         Self::full()
-            .include_files(from.file().walk_right())
-            .include_rank(from.rank())
+            .mask_files(from.file().walk_right())
+            .mask_rank(from.rank())
     }
 
     /// Create a `Bitboard`, setting each bit at positions in a ray starting at `from` and going diagonally down and to the right to 1.
@@ -560,7 +482,7 @@ impl Bitboard {
     /// // 1 00000010
     /// ```
     pub fn down_right_ray(from: Position) -> Self {
-        Self::full().include_positions(
+        Self::full().mask_positions(
             from.file()
                 .walk_right()
                 .zip(from.rank().walk_down())
@@ -587,8 +509,8 @@ impl Bitboard {
     /// ```
     pub fn down_ray(from: Position) -> Self {
         Self::full()
-            .include_ranks(from.rank().walk_down())
-            .include_file(from.file())
+            .mask_ranks(from.rank().walk_down())
+            .mask_file(from.file())
     }
 
     /// Create a `Bitboard`, setting each bit at positions in a ray starting at `from` and going diagonally down and to the left to 1.
@@ -609,7 +531,7 @@ impl Bitboard {
     /// // 1 00000000
     /// ```
     pub fn down_left_ray(from: Position) -> Self {
-        Self::full().include_positions(
+        Self::full().mask_positions(
             from.file()
                 .walk_left()
                 .zip(from.rank().walk_down())
@@ -636,8 +558,8 @@ impl Bitboard {
     /// ```
     pub fn left_ray(from: Position) -> Self {
         Self::full()
-            .include_files(from.file().walk_left())
-            .include_rank(from.rank())
+            .mask_files(from.file().walk_left())
+            .mask_rank(from.rank())
     }
 
     /// Create a `Bitboard`, setting each bit at positions in a ray starting at `from` and going diagonally up and to the left to 1.
@@ -658,7 +580,7 @@ impl Bitboard {
     /// // 1 00000000
     /// ```
     pub fn up_left_ray(from: Position) -> Self {
-        Self::full().include_positions(
+        Self::full().mask_positions(
             from.file()
                 .walk_left()
                 .zip(from.rank().walk_up())
@@ -679,13 +601,13 @@ impl Bitboard {
     pub fn white_pawn_targets(pos: Position, white_occupancy: Self, black_occupancy: Self) -> Self {
         let full_occupancy = black_occupancy | white_occupancy;
         let pos_bb = Self::with_one(pos);
-        let mut targets = (pos_bb << 8) & !full_occupancy;
+        let mut targets = (pos_bb << 8).clear(full_occupancy);
         if targets != 0 && pos.rank() == Rank::Two {
-            targets |= (pos_bb << 16) & !full_occupancy;
+            targets |= (pos_bb << 16).clear(full_occupancy);
         }
 
-        let up_left = (pos_bb << 7) & black_occupancy;
-        let up_right = (pos_bb << 9) & black_occupancy;
+        let up_left = (pos_bb << 7).mask(black_occupancy);
+        let up_right = (pos_bb << 9).mask(black_occupancy);
         targets | up_left | up_right
     }
 
@@ -702,13 +624,13 @@ impl Bitboard {
     pub fn black_pawn_targets(pos: Position, white_occupancy: Self, black_occupancy: Self) -> Self {
         let full_occupancy = white_occupancy | black_occupancy;
         let pos_bb = Self::with_one(pos);
-        let mut targets = (pos_bb >> 8) & !full_occupancy;
+        let mut targets = (pos_bb >> 8).clear(full_occupancy);
         if targets != 0 && pos.rank() == Rank::Seven {
-            targets |= (pos_bb >> 16) & !full_occupancy;
+            targets |= (pos_bb >> 16).clear(full_occupancy);
         }
 
-        let down_left = (pos_bb >> 9) & white_occupancy;
-        let down_right = (pos_bb >> 7) & white_occupancy;
+        let down_left = (pos_bb >> 9).mask(white_occupancy);
+        let down_right = (pos_bb >> 7).mask(white_occupancy);
         targets | down_left | down_right
     }
 
@@ -769,7 +691,8 @@ impl Bitboard {
         let left = king_bb >> 1;
         let up_left = (king_bb << 7).clear_file(File::H);
 
-        (up | up_right | right | down_right | down | down_left | left | up_left) & !self_occupancy
+        (up | up_right | right | down_right | down | down_left | left | up_left)
+            .clear(self_occupancy)
     }
 
     /// Returns a `Bitboard` describing valid target squares for a knight on `pos`.
@@ -812,7 +735,7 @@ impl Bitboard {
             | left_2_down_1
             | left_2_up_1
             | up_2_left_1)
-            & !self_occupancy
+            .clear(self_occupancy)
     }
 
     /// Returns a `Bitboard` describing valid target squares for a white bishop on `pos`.
@@ -878,7 +801,7 @@ impl Bitboard {
         (Self::line_targets(from, full_occupancy, LineAttack::Slash)
             | Self::line_targets(from, full_occupancy, LineAttack::Backslash))
         .clear_position(from)
-            & !self_occupancy
+        .clear(self_occupancy)
     }
 
     /// Returns a `Bitboard` describing valid target squares for a white rook on `pos`.
@@ -936,7 +859,7 @@ impl Bitboard {
         (Self::line_targets(from, full_occupancy, LineAttack::File)
             | Self::line_targets(from, full_occupancy, LineAttack::Rank))
         .clear_position(from)
-            & !self_occupancy
+        .clear(self_occupancy)
     }
 
     /// Returns a `Bitboard` describing valid target squares for a white queen on `pos`.
@@ -1002,7 +925,7 @@ impl Bitboard {
     fn queen_targets(from: Position, self_occupancy: Self, other_occupancy: Self) -> Self {
         (Self::bishop_targets(from, self_occupancy, other_occupancy)
             | Self::rook_targets(from, self_occupancy, other_occupancy))
-        .clear_position(from)
+        .clear(from)
     }
 
     /// Returns the first position in `self` where the bit is 1, or `None` if all bits are 0.
@@ -1038,7 +961,7 @@ impl Bitboard {
         let mut positions = HashSet::with_capacity(64);
 
         for shift in 0..64 {
-            let bit_at = self & (1 << shift);
+            let bit_at = self.mask(1 << shift);
             if bit_at != 0 {
                 positions.insert(
                     bitboard_index_to_position(shift).expect("shift should be less than 64"),
@@ -1054,7 +977,7 @@ impl Bitboard {
         match line {
             LineAttack::Rank => {
                 let left_ray = Self::left_ray(from);
-                let negative = left_ray & occupancy_without_self;
+                let negative = left_ray.mask(occupancy_without_self);
                 let negative_ms1b = negative.ms1b();
                 let left = if negative_ms1b == 0 {
                     left_ray.ls1b()
@@ -1063,7 +986,7 @@ impl Bitboard {
                 };
 
                 let right_ray = Self::right_ray(from);
-                let positive = right_ray & occupancy_without_self;
+                let positive = right_ray.mask(occupancy_without_self);
                 let positive_ls1b = positive.ls1b();
                 let right = if positive_ls1b == 0 {
                     right_ray.ms1b()
@@ -1074,16 +997,16 @@ impl Bitboard {
                 let ends = left | right;
 
                 let bb = ((Self::full() >> ends.data().leading_zeros())
-                    & (Self::full() << ends.data().trailing_zeros()));
+                    .mask((Self::full() << ends.data().trailing_zeros())));
                 if bb == 0 {
-                    Self::full().include_rank(from.rank())
+                    Self::full().mask(from.rank())
                 } else {
-                    bb.include_rank(from.rank())
+                    bb.mask(from.rank())
                 }
             }
             LineAttack::File => {
                 let down_ray = Self::down_ray(from);
-                let negative = down_ray & occupancy_without_self;
+                let negative = down_ray.mask(occupancy_without_self);
                 let negative_ms1b = negative.ms1b();
                 let left = if negative_ms1b == 0 {
                     down_ray.ls1b()
@@ -1092,7 +1015,7 @@ impl Bitboard {
                 };
 
                 let up_ray = Self::up_ray(from);
-                let positive = up_ray & occupancy_without_self;
+                let positive = up_ray.mask(occupancy_without_self);
                 let positive_ls1b = positive.ls1b();
                 let right = if positive_ls1b == 0 {
                     up_ray.ms1b()
@@ -1103,11 +1026,11 @@ impl Bitboard {
                 let ends = left | right;
 
                 let bb = ((Self::full() >> ends.data().leading_zeros())
-                    & (Self::full() << ends.data().trailing_zeros()));
+                    .mask((Self::full() << ends.data().trailing_zeros())));
                 if bb == 0 {
-                    Self::full().include_file(from.file())
+                    Self::full().mask(from.file())
                 } else {
-                    bb.include_file(from.file())
+                    bb.mask(from.file())
                 }
             }
             LineAttack::Slash => {
@@ -1212,128 +1135,62 @@ impl Not for Bitboard {
     }
 }
 
-impl BitOr for Bitboard {
+impl<T> BitOr<T> for Bitboard
+where
+    Mask: From<T>,
+{
     type Output = Self;
 
-    fn bitor(self, rhs: Self) -> Self::Output {
-        Self::construct(self.0.bitor(rhs.0))
+    fn bitor(self, rhs: T) -> Self::Output {
+        Self::construct(self.data() | Mask::from(rhs).0)
     }
 }
 
-impl BitOr<u64> for Bitboard {
-    type Output = Self;
-
-    fn bitor(self, rhs: u64) -> Self::Output {
-        Self::construct(self.data().bitor(rhs))
-    }
-}
-
-impl BitOr<Position> for Bitboard {
-    type Output = Self;
-
-    fn bitor(self, rhs: Position) -> Self::Output {
-        self.bitor(Self::with_one(rhs))
-    }
-}
-
-impl BitOrAssign for Bitboard {
-    fn bitor_assign(&mut self, rhs: Self) {
+impl<T> BitOrAssign<T> for Bitboard
+where
+    Mask: From<T>,
+{
+    fn bitor_assign(&mut self, rhs: T) {
         *self = self.bitor(rhs);
     }
 }
 
-impl BitOrAssign<u64> for Bitboard {
-    fn bitor_assign(&mut self, rhs: u64) {
-        *self = self.bitor(rhs)
-    }
-}
-
-impl BitOrAssign<Position> for Bitboard {
-    fn bitor_assign(&mut self, rhs: Position) {
-        *self = self.bitor(rhs)
-    }
-}
-
-impl BitAnd for Bitboard {
+impl<T> BitAnd<T> for Bitboard
+where
+    Mask: From<T>,
+{
     type Output = Self;
 
-    fn bitand(self, rhs: Self) -> Self::Output {
-        Self::construct(self.0.bitand(rhs.0))
+    fn bitand(self, rhs: T) -> Self::Output {
+        self.mask(rhs)
     }
 }
 
-impl BitAnd<u64> for Bitboard {
-    type Output = Self;
-
-    fn bitand(self, rhs: u64) -> Self::Output {
-        Self::construct(self.data().bitand(rhs))
-    }
-}
-
-impl BitAnd<Position> for Bitboard {
-    type Output = Self;
-
-    fn bitand(self, rhs: Position) -> Self::Output {
-        self.bitand(Self::with_one(rhs))
-    }
-}
-
-impl BitAndAssign for Bitboard {
-    fn bitand_assign(&mut self, rhs: Self) {
-        *self = self.bitand(rhs)
-    }
-}
-
-impl BitAndAssign<u64> for Bitboard {
-    fn bitand_assign(&mut self, rhs: u64) {
+impl<T> BitAndAssign<T> for Bitboard
+where
+    Mask: From<T>,
+{
+    fn bitand_assign(&mut self, rhs: T) {
         *self = self.bitand(rhs);
     }
 }
 
-impl BitAndAssign<Position> for Bitboard {
-    fn bitand_assign(&mut self, rhs: Position) {
-        *self = self.bitand(rhs)
-    }
-}
-
-impl BitXor for Bitboard {
+impl<T> BitXor<T> for Bitboard
+where
+    Mask: From<T>,
+{
     type Output = Self;
 
-    fn bitxor(self, rhs: Self) -> Self::Output {
-        Self::construct(self.0.bitxor(rhs.0))
+    fn bitxor(self, rhs: T) -> Self::Output {
+        Self(self.data() ^ Mask::from(rhs).0)
     }
 }
 
-impl BitXor<u64> for Bitboard {
-    type Output = Self;
-
-    fn bitxor(self, rhs: u64) -> Self::Output {
-        Self::construct(self.data().bitxor(rhs))
-    }
-}
-
-impl BitXor<Position> for Bitboard {
-    type Output = Self;
-
-    fn bitxor(self, rhs: Position) -> Self::Output {
-        self.bitxor(Self::with_one(rhs))
-    }
-}
-
-impl BitXorAssign for Bitboard {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        *self = self.bitxor(rhs)
-    }
-}
-
-impl BitXorAssign<u64> for Bitboard {
-    fn bitxor_assign(&mut self, rhs: u64) {
-        *self = self.bitxor(rhs)
-    }
-}
-
-impl BitXorAssign<Position> for Bitboard {
-    fn bitxor_assign(&mut self, rhs: Position) {
+impl<T> BitXorAssign<T> for Bitboard
+where
+    Mask: From<T>,
+{
+    fn bitxor_assign(&mut self, rhs: T) {
         *self = self.bitxor(rhs)
     }
 }
@@ -1529,9 +1386,29 @@ pub(crate) fn bitboard_index_to_position(idx: usize) -> Option<Position> {
 
 pub struct Mask(u64);
 
+impl Not for Mask {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        Self(!self.0)
+    }
+}
+
 impl From<u64> for Mask {
     fn from(value: u64) -> Self {
         Self(value)
+    }
+}
+
+impl From<Bitboard> for Mask {
+    fn from(value: Bitboard) -> Self {
+        Self(value.data())
+    }
+}
+
+impl From<&Bitboard> for Mask {
+    fn from(value: &Bitboard) -> Self {
+        Self(value.data())
     }
 }
 
@@ -1548,6 +1425,36 @@ impl From<&[Position]> for Mask {
             v |= (1 << position_to_bitboard_index(pos));
         }
         Self(v)
+    }
+}
+
+impl From<File> for Mask {
+    fn from(value: File) -> Self {
+        Self::from(match value {
+            File::A => FILE_A_MASK,
+            File::B => FILE_B_MASK,
+            File::C => FILE_C_MASK,
+            File::D => FILE_D_MASK,
+            File::E => FILE_E_MASK,
+            File::F => FILE_F_MASK,
+            File::G => FILE_G_MASK,
+            File::H => FILE_H_MASK,
+        })
+    }
+}
+
+impl From<Rank> for Mask {
+    fn from(value: Rank) -> Self {
+        Self::from(match value {
+            Rank::One => RANK_1_MASK,
+            Rank::Two => RANK_2_MASK,
+            Rank::Three => RANK_3_MASK,
+            Rank::Four => RANK_4_MASK,
+            Rank::Five => RANK_5_MASK,
+            Rank::Six => RANK_6_MASK,
+            Rank::Seven => RANK_7_MASK,
+            Rank::Eight => RANK_8_MASK,
+        })
     }
 }
 
@@ -1591,6 +1498,7 @@ mod tests {
         let a4 = Bitboard::with_one(A4);
         let a4_and_g6 = Bitboard::with_ones([A4, G6]);
         let only_a4 = a4 & a4_and_g6;
+        dbg!(a4, a4_and_g6, only_a4);
 
         assert_eq!(only_a4, a4);
 
@@ -1605,12 +1513,13 @@ mod tests {
         let a4 = Bitboard::with_one(A4);
         let only_b3 = a4 ^ a4_and_b3;
 
+        dbg!(a4, a4_and_b3, only_b3);
         assert_eq!(only_b3, Bitboard::with_one(B3));
     }
 
     #[test]
     fn mask_file_test() {
-        let file_b_only = INITIAL_STATE.include_file(File::B);
+        let file_b_only = INITIAL_STATE.mask_file(File::B);
         assert_eq!(
             file_b_only,
             Bitboard::construct(0b0000001000000010000000000000000000000000000000000000001000000010)
@@ -1619,15 +1528,15 @@ mod tests {
 
     #[test]
     fn include_files_test() {
-        let file_b_and_e = INITIAL_STATE.include_files([File::B, File::E]);
+        let file_b_and_e = INITIAL_STATE.mask_files([File::B, File::E]);
         assert_eq!(
             file_b_and_e,
             Bitboard::construct(0b0001001000010010000000000000000000000000000000000001001000010010)
         );
 
-        assert_eq!(Bitboard::empty(), Bitboard::full().include_files([]));
+        assert_eq!(Bitboard::empty(), Bitboard::full().mask_files([]));
 
-        assert_eq!(Bitboard::full(), Bitboard::full().include_files(ALL_FILES));
+        assert_eq!(Bitboard::full(), Bitboard::full().mask_files(ALL_FILES));
     }
 
     #[test]
@@ -1650,7 +1559,7 @@ mod tests {
 
     #[test]
     fn mask_rank_test() {
-        let rank_2_only = INITIAL_STATE.include_rank(Rank::Two);
+        let rank_2_only = INITIAL_STATE.mask_rank(Rank::Two);
         assert_eq!(
             rank_2_only,
             Bitboard::construct(0b0000000000000000000000000000000000000000000000001111111100000000)
@@ -1659,15 +1568,15 @@ mod tests {
 
     #[test]
     fn mask_ranks_test() {
-        let rank_2_and_8 = INITIAL_STATE.include_ranks([Rank::Two, Rank::Eight]);
+        let rank_2_and_8 = INITIAL_STATE.mask_ranks([Rank::Two, Rank::Eight]);
         assert_eq!(
             rank_2_and_8,
             Bitboard::construct(0b1111111100000000000000000000000000000000000000001111111100000000)
         );
 
-        assert_eq!(Bitboard::empty(), Bitboard::full().include_ranks([]));
+        assert_eq!(Bitboard::empty(), Bitboard::full().mask_ranks([]));
 
-        assert_eq!(Bitboard::full(), Bitboard::full().include_ranks(ALL_RANKS));
+        assert_eq!(Bitboard::full(), Bitboard::full().mask_ranks(ALL_RANKS));
     }
 
     #[test]
@@ -1695,13 +1604,13 @@ mod tests {
         let targets_of_e2 = Bitboard::king_targets(E2, Bitboard::empty());
         assert_eq!(
             targets_of_e2,
-            Bitboard::full().include_positions([E3, F3, F2, F1, E1, D1, D2, D3])
+            Bitboard::full().mask_positions([E3, F3, F2, F1, E1, D1, D2, D3])
         );
 
         let targets_of_g8 = Bitboard::king_targets(G8, Bitboard::empty());
         assert_eq!(
             targets_of_g8,
-            Bitboard::full().include_positions([H8, H7, G7, F7, F8])
+            Bitboard::full().mask_positions([H8, H7, G7, F7, F8])
         );
     }
 
@@ -1710,16 +1619,16 @@ mod tests {
         let targets_of_e5 = Bitboard::knight_targets(E5, Bitboard::empty());
         assert_eq!(
             targets_of_e5,
-            Bitboard::full().include_positions([F7, G6, G4, F3, D3, C4, C6, D7])
+            Bitboard::full().mask_positions([F7, G6, G4, F3, D3, C4, C6, D7])
         );
 
         let targets_of_a1 = Bitboard::knight_targets(A1, Bitboard::empty());
-        assert_eq!(targets_of_a1, Bitboard::full().include_positions([B3, C2]));
+        assert_eq!(targets_of_a1, Bitboard::full().mask_positions([B3, C2]));
 
         let targets_of_c8 = Bitboard::knight_targets(C8, Bitboard::empty());
         assert_eq!(
             targets_of_c8,
-            Bitboard::full().include_positions([A7, B6, D6, E7])
+            Bitboard::full().mask_positions([A7, B6, D6, E7])
         );
     }
 
@@ -1814,8 +1723,8 @@ mod tests {
         assert_eq!(
             Bitboard::white_pawn_targets(
                 E2,
-                Bitboard::full().include_ranks([Rank::Seven, Rank::Eight]),
-                Bitboard::full().include_ranks([Rank::One, Rank::Two])
+                Bitboard::full().mask_ranks([Rank::Seven, Rank::Eight]),
+                Bitboard::full().mask_ranks([Rank::One, Rank::Two])
             ),
             Bitboard::with_ones([E3, E4])
         );
@@ -1824,7 +1733,7 @@ mod tests {
             Bitboard::white_pawn_targets(
                 E6,
                 Bitboard::empty(),
-                Bitboard::full().include_ranks([Rank::Seven, Rank::Eight]),
+                Bitboard::full().mask_ranks([Rank::Seven, Rank::Eight]),
             ),
             Bitboard::with_ones([D7, F7])
         );
@@ -1835,8 +1744,8 @@ mod tests {
         assert_eq!(
             Bitboard::black_pawn_targets(
                 A7,
-                INITIAL_STATE.include_ranks([Rank::One, Rank::Two]),
-                INITIAL_STATE.include_ranks([Rank::Seven, Rank::Eight])
+                INITIAL_STATE.mask_ranks([Rank::One, Rank::Two]),
+                INITIAL_STATE.mask_ranks([Rank::Seven, Rank::Eight])
             ),
             Bitboard::with_ones([A6, A5])
         );
@@ -1844,7 +1753,7 @@ mod tests {
         assert_eq!(
             Bitboard::black_pawn_targets(
                 H6,
-                INITIAL_STATE.include_ranks([Rank::One, Rank::Two]),
+                INITIAL_STATE.mask_ranks([Rank::One, Rank::Two]),
                 Bitboard::empty()
             ),
             Bitboard::with_ones([H5])
@@ -1853,7 +1762,7 @@ mod tests {
         assert_eq!(
             Bitboard::black_pawn_targets(
                 H3,
-                INITIAL_STATE.include_ranks([Rank::One, Rank::Two]),
+                INITIAL_STATE.mask_ranks([Rank::One, Rank::Two]),
                 Bitboard::empty()
             ),
             Bitboard::with_ones([G2])
@@ -1973,7 +1882,7 @@ mod tests {
         let bb_with_two_ones = Bitboard::with_ones([A2, C7]);
         println!("{bb_with_two_ones}");
 
-        let initial_state_but_only_file_c = INITIAL_STATE.include_file(File::C);
+        let initial_state_but_only_file_c = INITIAL_STATE.mask_file(File::C);
         println!("{initial_state_but_only_file_c}");
 
         let up_right_from_b5 = Bitboard::up_right_ray(B5);
