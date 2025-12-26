@@ -109,13 +109,13 @@ impl Bitboard {
         self.mask(1 << idx) > 0
     }
 
-    pub fn mask(&self, mask: impl Into<Mask>) -> Self {
-        let mask: Mask = mask.into();
+    pub fn mask(&self, mask: impl Into<Self>) -> Self {
+        let mask: Self = mask.into();
         Self(self.0 & mask.0)
     }
 
-    pub fn clear(&self, mask: impl Into<Mask>) -> Self {
-        let mask: Mask = mask.into();
+    pub fn clear(&self, mask: impl Into<Self>) -> Self {
+        let mask: Self = mask.into();
         Self(self.0 & !mask.0)
     }
 
@@ -125,7 +125,7 @@ impl Bitboard {
     /// ```rust
     /// # use bitboard64::prelude::*;
     /// let bb = Bitboard::with_ones([F2, F3]);
-    /// let masked = bb.include_position(F3);
+    /// let masked = bb.mask_position(F3);
     /// assert_eq!(masked, Bitboard::with_one(F3)); // the bit at F2 is now 0
     /// //   ABCDEFGH      ABCDEFGH
     /// // 8 00000000    8 00000000
@@ -137,7 +137,7 @@ impl Bitboard {
     /// // 2 00000100    2 00000000
     /// // 1 00000000    1 00000000
     /// ```
-    pub fn include_position(self, pos: Position) -> Self {
+    pub fn mask_position(self, pos: Position) -> Self {
         self.mask(pos)
     }
 
@@ -1137,18 +1137,18 @@ impl Not for Bitboard {
 
 impl<T> BitOr<T> for Bitboard
 where
-    Mask: From<T>,
+    Bitboard: From<T>,
 {
     type Output = Self;
 
     fn bitor(self, rhs: T) -> Self::Output {
-        Self::construct(self.data() | Mask::from(rhs).0)
+        Self::construct(self.data() | Self::from(rhs).0)
     }
 }
 
 impl<T> BitOrAssign<T> for Bitboard
 where
-    Mask: From<T>,
+    Bitboard: From<T>,
 {
     fn bitor_assign(&mut self, rhs: T) {
         *self = self.bitor(rhs);
@@ -1157,7 +1157,7 @@ where
 
 impl<T> BitAnd<T> for Bitboard
 where
-    Mask: From<T>,
+    Bitboard: From<T>,
 {
     type Output = Self;
 
@@ -1168,7 +1168,7 @@ where
 
 impl<T> BitAndAssign<T> for Bitboard
 where
-    Mask: From<T>,
+    Bitboard: From<T>,
 {
     fn bitand_assign(&mut self, rhs: T) {
         *self = self.bitand(rhs);
@@ -1177,18 +1177,18 @@ where
 
 impl<T> BitXor<T> for Bitboard
 where
-    Mask: From<T>,
+    Bitboard: From<T>,
 {
     type Output = Self;
 
     fn bitxor(self, rhs: T) -> Self::Output {
-        Self(self.data() ^ Mask::from(rhs).0)
+        Self(self.data() ^ Self::from(rhs).0)
     }
 }
 
 impl<T> BitXorAssign<T> for Bitboard
 where
-    Mask: From<T>,
+    Self: From<T>,
 {
     fn bitxor_assign(&mut self, rhs: T) {
         *self = self.bitxor(rhs)
@@ -1270,6 +1270,52 @@ impl From<u64> for Bitboard {
 impl From<Bitboard> for u64 {
     fn from(value: Bitboard) -> Self {
         value.data()
+    }
+}
+
+impl From<Position> for Bitboard {
+    fn from(value: Position) -> Self {
+        Self::new(1 << position_to_bitboard_index(value))
+    }
+}
+
+impl From<&[Position]> for Bitboard {
+    fn from(value: &[Position]) -> Self {
+        let mut v = 0;
+        for &pos in value {
+            v |= (1 << position_to_bitboard_index(pos));
+        }
+        Self::new(v)
+    }
+}
+
+impl From<File> for Bitboard {
+    fn from(value: File) -> Self {
+        Self::from(match value {
+            File::A => FILE_A_MASK,
+            File::B => FILE_B_MASK,
+            File::C => FILE_C_MASK,
+            File::D => FILE_D_MASK,
+            File::E => FILE_E_MASK,
+            File::F => FILE_F_MASK,
+            File::G => FILE_G_MASK,
+            File::H => FILE_H_MASK,
+        })
+    }
+}
+
+impl From<Rank> for Bitboard {
+    fn from(value: Rank) -> Self {
+        Self::from(match value {
+            Rank::One => RANK_1_MASK,
+            Rank::Two => RANK_2_MASK,
+            Rank::Three => RANK_3_MASK,
+            Rank::Four => RANK_4_MASK,
+            Rank::Five => RANK_5_MASK,
+            Rank::Six => RANK_6_MASK,
+            Rank::Seven => RANK_7_MASK,
+            Rank::Eight => RANK_8_MASK,
+        })
     }
 }
 
@@ -1382,80 +1428,6 @@ pub(crate) fn bitboard_index_to_position(idx: usize) -> Option<Position> {
         _ => unreachable!("idx / 8 cannot be larger than 7 if idx < 64"),
     };
     Some(Position::new(file, rank))
-}
-
-pub struct Mask(u64);
-
-impl Not for Mask {
-    type Output = Self;
-
-    fn not(self) -> Self::Output {
-        Self(!self.0)
-    }
-}
-
-impl From<u64> for Mask {
-    fn from(value: u64) -> Self {
-        Self(value)
-    }
-}
-
-impl From<Bitboard> for Mask {
-    fn from(value: Bitboard) -> Self {
-        Self(value.data())
-    }
-}
-
-impl From<&Bitboard> for Mask {
-    fn from(value: &Bitboard) -> Self {
-        Self(value.data())
-    }
-}
-
-impl From<Position> for Mask {
-    fn from(value: Position) -> Self {
-        Self(1 << position_to_bitboard_index(value))
-    }
-}
-
-impl From<&[Position]> for Mask {
-    fn from(value: &[Position]) -> Self {
-        let mut v = 0;
-        for &pos in value {
-            v |= (1 << position_to_bitboard_index(pos));
-        }
-        Self(v)
-    }
-}
-
-impl From<File> for Mask {
-    fn from(value: File) -> Self {
-        Self::from(match value {
-            File::A => FILE_A_MASK,
-            File::B => FILE_B_MASK,
-            File::C => FILE_C_MASK,
-            File::D => FILE_D_MASK,
-            File::E => FILE_E_MASK,
-            File::F => FILE_F_MASK,
-            File::G => FILE_G_MASK,
-            File::H => FILE_H_MASK,
-        })
-    }
-}
-
-impl From<Rank> for Mask {
-    fn from(value: Rank) -> Self {
-        Self::from(match value {
-            Rank::One => RANK_1_MASK,
-            Rank::Two => RANK_2_MASK,
-            Rank::Three => RANK_3_MASK,
-            Rank::Four => RANK_4_MASK,
-            Rank::Five => RANK_5_MASK,
-            Rank::Six => RANK_6_MASK,
-            Rank::Seven => RANK_7_MASK,
-            Rank::Eight => RANK_8_MASK,
-        })
-    }
 }
 
 #[cfg(test)]
